@@ -3,6 +3,7 @@ from __future__ import absolute_import
 
 
 import logging
+import inspect
 import json
 import formencode
 import pyramid.httpexceptions
@@ -21,19 +22,74 @@ class BadParams(pyramid.httpexceptions.HTTPBadRequest):
     pass
 
 
-
-
 """
 Implemented
 
     decorators=(validate_view(),)
 """
 
+class Dummyobj:
+    pass
+
+
+def curseschema(schema, value_dict, unpacked_errors, state=None):
+    """Recursively iterate through schema, re-validating and converting
+    `value_dict` data that is not in error dictionary `unpacked_errors`.
+    """
+    for key, value in schema.fields.items():
+        if isinstance(value, formencode.Schema):
+            yield key, dict(curseschema(value, value_dict[key],
+                                        unpacked_errors.get(key, {})))
+        elif isinstance(value, formencode.Validator):
+            if key not in unpacked_errors and key in value_dict:
+                yield key, value.to_python(value_dict[key], state)
+        else:
+            raise TypeError("Expected `formencode.Schema` or "
+                    "`formencode.Validator`, got %s instead." % (type(value)))
+
+
+def validate(request, schema, variable_decode=True,
+             variable_decode_dict_char=".", variable_decode_list_char="-",
+             context=None, data=None):
+    """Method to handle the validation of `request.params`.
+    """
+
+    if not data:
+        try:
+            data = request.json_body
+        except ValueError:
+            data = request.params
+
+    if variable_decode is True:
+        data = formencode.variabledecode.variable_decode(data,
+                            dict_char=variable_decode_dict_char,
+                            list_char=variable_decode_list_char)
+
+    state = Dummyobj()
+    state.request = request
+    state.context = context
+
+    schema = inspect.isclass(schema) and schema() or schema
+
+    return schema.to_python(data, state=state)
+
+
+class ValidateViewHook:
+    """Allows for Validator generation at the time of the
+    `view_callable`s execution.
+    """
+
+    def __init__(self, validator_factory):
+        self.factory = validator_factory
+
+    def __call__(self, request):
+        return self.factory(request)
+
 
 def validate_view2(params=None, match=None, variable_decode=True,
                  variable_decode_dict_char=".", variable_decode_list_char="-",
                  reify_params=True, reify_match=True, raise_exc=True,
-                 json_exc=False,
+                 json_exc=False, partial=False,
                  invalid_params_exc=BadParams, invalid_match_exc=BadMatch,
                  exc_headers_func=pharaoh.cors.gen_headers,
                  valid_params_attr="validated_params",
@@ -41,8 +97,9 @@ def validate_view2(params=None, match=None, variable_decode=True,
                  invalid_params_attr="error_params",
                  invalid_match_attr="error_match"):
 
-    params_schema = callable(params) and params() or params
-    match_schema = callable(match) and match() or match
+
+    params_schema = inspect.isclass(params) and params() or params
+    match_schema = inspect.isclass(match) and match() or match
 
     if (params_schema is None and
             match_schema is None):
@@ -51,15 +108,17 @@ def validate_view2(params=None, match=None, variable_decode=True,
 
     if (params_schema and 
         not isinstance(params_schema, (formencode.Schema,
-                                       formencode.FancyValidator))):
+                                       formencode.FancyValidator,
+                                       ValidateViewHook))):
         raise ValueError("`validate_view` expects `params` to be a "
-                         "Formencode Schema or FancyValidator.")
+                         "Formencode Schema, FancyValidator or ValidateViewHook.")
 
     if (match_schema and 
         not isinstance(match_schema, (formencode.Schema,
-                                      formencode.FancyValidator))):
+                                      formencode.FancyValidator,
+                                      ValidateViewHook))):
         raise ValueError("`validate_view` expects `match` to be a "
-                         "Formencode Schema or FancyValidator.")
+                         "Formencode Schema, FancyValidator, or ValidateViewHook.")
 
     def _decorator(view_callable):
         def _decorated_view(context, request):
@@ -73,33 +132,53 @@ def validate_view2(params=None, match=None, variable_decode=True,
             def validate_params(context):
                 """Method to handle the validation of `request.params`.
                 """
+                schema = isinstance(params_schema, ValidateViewHook) and params_schema(request) or params_schema
                 try:
                     data = request.json_body
                 except ValueError:
                     data = request.params
 
-                if variable_decode is True:
-                    data = formencode.variabledecode.variable_decode(data,
-                                        dict_char=variable_decode_dict_char,
-                                        list_char=variable_decode_list_char)
-
+                    if variable_decode is True:
+                        data = formencode.variabledecode.variable_decode(data,
+                                            dict_char=variable_decode_dict_char,
+                                            list_char=variable_decode_list_char)
+                state = Dummyobj()
+                state.request = request
+                state.context = context
                 try:
-                    return params_schema.to_python(data)
+                    return schema.to_python(data, state=state)
                 except formencode.Invalid as exc:
                     unpacked = exc.unpack_errors()
-                    logging.warning("Formencode validation errors: %s" % unpacked)
                     request.set_property(lambda ctx: unpacked,
                                          invalid_params_attr, reify=True)
+
+                    def cursedict(d1, d2):
+                        for k, v in d1.items():
+                            if isinstance(v, dict):
+                                if k in d2:
+                                    yield k, dict(cursedict(v, d2[k]))
+                                else:
+                                    yield k, v
+                            else:
+                                if k not in d2:
+                                    yield k, v
+
                     if raise_exc is True:
                         _raise(invalid_params_exc, unpacked)
                     else:
-                        return {}
+                        return dict(curseschema(schema, data, unpacked, state=state))
 
             def validate_match(context):
                 """Method to handle the validation of `request.matchdict`.
                 """
+
+                schema = isinstance(match_schema, ValidateViewHook) and match_schema(request) or match_schema
+
+                state = Dummyobj()
+                state.request = request
+                state.context = context
                 try:
-                    return match_schema.to_python(request.matchdict)
+                    return schema.to_python(request.matchdict, state=state)
                 except formencode.Invalid as exc:
                     unpacked = exc.unpack_errors()
                     request.set_property(lambda ctx: unpacked,
@@ -310,7 +389,6 @@ def validate_view(params=None, match=None, headers=pharaoh.cors.gen_headers,
 
             def validate_match(this):
                 try:
-                    print(request.matchdict)
                     data = match.to_python(request.matchdict)
                 except formencode.Invalid as e:
                     logging.error("`validate_model` failed on request.matchdict"
