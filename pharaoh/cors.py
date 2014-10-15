@@ -32,3 +32,16 @@ def gen_headers(request, allowed_headers=['Content-Type'],
         #headers.append(('Access-Control-Allow-Origin', request.referer.rstrip('/')))
         #headers.append(('Access-Control-Allow-Origin', request.referer))
     return headers
+
+
+def decorator(allowed_headers=['Content-Type'],
+            allowed_methods=['GET', 'PUT', 'POST']):
+    """View Decorator"""
+    def _cors_view_decorator(view_callable):
+        def _cors_view(context, request):
+            request.response.headers.update(gen_headers(request, 
+                                               allowed_headers=allowed_headers,
+                                               allowed_methods=allowed_methods))
+            return view_callable(context, request)
+        return _cors_view
+    return _cors_view_decorator
