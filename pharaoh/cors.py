@@ -3,8 +3,7 @@ import urllib.parse
 
 def gen_headers(request, allowed_headers=['Content-Type'],
             allowed_methods=['GET', 'PUT', 'POST']):
-    # Move this. It's not a formencode helper.
-    # Change this to a class instance per request?
+    # TODO: Change this to a class instance per request?
 
     # Consider these headers:
     # X-CSRF-Token
@@ -17,20 +16,17 @@ def gen_headers(request, allowed_headers=['Content-Type'],
     # Date
     # X-Api-Version
     headers = [
-        # Always creds?
-        ('Access-Control-Allow-Credentials', 'true'),
+        ('Access-Control-Allow-Credentials', 'true'), # Always Allow-Credentials?
         ('Access-Control-Allow-Headers', ','.join(allowed_headers)),
         ('Access-Control-Allow-Methods', ','.join(allowed_methods))]
     # At first glance, this may appear insecure, but if the referer
-    # should be checked, it should be checked elsewhere.
+    # should be checked, it should be checked elsewhere. Remember,
+    # the referer is never a good security metric.
     if request.referer:
-        refp = urllib.parse.urlparse(request.referer)
+        refp = urllib.parse.urlparse(request.referer)  # User pyramid.compat here.
         origin = urllib.parse.urlunparse((refp.scheme, refp.netloc,
                                           '', '', '', ''))
-
         headers.append(('Access-Control-Allow-Origin', origin))
-        #headers.append(('Access-Control-Allow-Origin', request.referer.rstrip('/')))
-        #headers.append(('Access-Control-Allow-Origin', request.referer))
     return headers
 
 

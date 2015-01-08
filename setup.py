@@ -12,12 +12,12 @@ requires = [
     ]
 
 setup(name='pharaoh',
-      version='0.1',
+      version='0.2',
       description='Pyramid helpers, base classes, etc.',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
-        "Programming Language :: Python"
-        ],
+          "Programming Language :: Python"
+          ],
       author='Nicholas Long',
       author_email='adoc@webmob.net',
       url='https://github.com/adoc/',
@@ -27,5 +27,9 @@ setup(name='pharaoh',
       zip_safe=False,
       test_suite='pharaoh',
       install_requires=requires,
-      test_requires=[]
+      test_requires=[],
+      entry_points= """\
+        [pyramid.scaffold]
+        srbb_stack=pharaoh.scaffolds:SrbbStack
+      """
       )

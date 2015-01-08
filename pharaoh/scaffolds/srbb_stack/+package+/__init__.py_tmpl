@@ -1,0 +1,27 @@
+"""
+"""
+
+import pyramid.config
+
+import core
+import core.auth
+
+
+def main(global_config, **settings):
+    """ This function returns a Pyramid WSGI application.
+    """
+
+    config = pyramid.config.Configurator()
+
+    core.init_core(settings) # TODO: Might refactor this in to core.models.init_models
+
+    if settings.get('auth.enable') is True:
+        core.auth.init_auth(settings)
+        config.set_authentication_policy(
+                        pharaoh.auth.auth_tkt_from_config(settings,
+                            callback=core.auth.get_groups))
+
+        config.set_authorization_policy(
+                        pyramid.authorization.ACLAuthorizationPolicy())
+
+    return config.make_wsgi_app()
