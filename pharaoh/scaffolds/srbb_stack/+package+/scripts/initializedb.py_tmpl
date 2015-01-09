@@ -24,17 +24,29 @@ def main(argv=sys.argv):
     pyramid.paster.setup_logging(config_uri)
     settings = pyramid.paster.get_appsettings(config_uri, options=options)
 
-    core.init_core(settings)
+    config = pyramid.config.Configurator(settings=settings)
 
-    if config.registry.settings.get('database.initialize.drop_all') is True:
+    core.init_core(settings, config)
+
+    if settings['database.initialize.drop_all']:
         core.models.Base.metadata.drop_all(core.models.Engine)
 
     core.models.Base.metadata.create_all(core.models.Engine)
 
 
     with transaction.manager:
-        for init_group in pyramid.settings.aslist(settings.get('auth.initialize.groups',[])):
-            print(init_group)
+        groups = {}
+        for init_group in settings['auth.initialize.groups']:
+            groups[init_group['name']] = core.models.auth.Group(**init_group)
+            core.models.Session.add(groups[init_group['name']])
+
+        for init_user in settings['auth.initialize.users']:
+            user_groups = [groups[name] for name in init_user['groups']]
+            del init_user['groups']
+            user = core.models.auth.User(**init_user)
+            user.groups.extend(user_groups)
+            core.models.Session.add(user)
+
 
         '''
         # Add groups

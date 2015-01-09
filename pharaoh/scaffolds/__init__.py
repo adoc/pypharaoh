@@ -16,7 +16,8 @@ class SrbbStack(pyramid.scaffolds.PyramidTemplate):
     summary = ("Sets up a standard RESTful Pyramid application and front end "
             "using SQLAlchemy, Require.js, Backbone.js, and Bootstrap.")
 
-    def _gen_sec(self, entropy=secret_entropy):
+    @staticmethod
+    def _gen_sec(entropy=secret_entropy):
         return pyramid.compat.native_(
             binascii.hexlify(os.urandom(entropy)))
 

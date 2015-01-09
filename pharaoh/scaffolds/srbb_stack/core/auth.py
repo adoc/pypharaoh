@@ -4,12 +4,13 @@
 import pyramid.security
 
 
-def init_auth(settings, config):
+def init_auth(settings):
+    global get_user
     global get_groups
     global get_this_user
 
     # Retreive the `get_user` function as specified in the ini.
-    get_user = config.maybe_dotted(settings['auth.get_user_func'])
+    get_user = settings['auth.get_user_func']
 
     def get_groups(userid, request):
         """Get a list of groups the user belongs to.

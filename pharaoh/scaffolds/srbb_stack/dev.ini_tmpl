@@ -41,7 +41,7 @@ auth.enable = true
 #   (or other identifier) and returns a User object or None.
 #   If "authn.models" is disabled, replace this with a function that
 #   will return a valid User object.
-auth.get_user_func = core.models.auth.get_user
+auth.get_user_func = core.models.auth:get_user
 
 # Initialize database with the following values.
 # groupname:level
