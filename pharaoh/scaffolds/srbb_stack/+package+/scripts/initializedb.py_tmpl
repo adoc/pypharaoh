@@ -1,19 +1,13 @@
 import os
 import sys
 import transaction
+import sqlalchemy
+import pyramid.paster
+import pyramid.config
+import pyramid.scripts.common
 
-from sqlalchemy import engine_from_config
-
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-    )
-
-from pyramid.scripts.common import parse_vars
-
-import {{project}}.models as models
-import cap.auth
-
+import core
+import core.models
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
@@ -26,27 +20,32 @@ def main(argv=sys.argv):
     if len(argv) < 2:
         usage(argv)
     config_uri = argv[1]
-    options = parse_vars(argv[2:])
-    setup_logging(config_uri)
-    settings = get_appsettings(config_uri, options=options)
-    engine = engine_from_config(settings, 'sqlalchemy.')
+    options = pyramid.scripts.common.parse_vars(argv[2:])
+    pyramid.paster.setup_logging(config_uri)
+    settings = pyramid.paster.get_appsettings(config_uri, options=options)
 
-    cap.models.DBSession.configure(bind=engine)
-    cap.models.init_models(settings, cap.auth.User)
-    cap.models.Base.metadata.drop_all(engine)
-    cap.models.Base.metadata.create_all(engine)
+    core.init_core(settings)
+
+    if config.registry.settings.get('database.initialize.drop_all') is True:
+        core.models.Base.metadata.drop_all(core.models.Engine)
+
+    core.models.Base.metadata.create_all(core.models.Engine)
 
 
     with transaction.manager:
+        for init_group in pyramid.settings.aslist(settings.get('auth.initialize.groups',[])):
+            print(init_group)
+
+        '''
         # Add groups
-        admins = cap.auth.Group(name="admins")
-        managers = cap.auth.Group(name="managers")
-        users = cap.auth.Group(name="users")
+        admins = core.models.auth.Group(name="admins")
+        users = core.models.auth.Group(name="users")
         cap.models.DBSession.add(admins)
-        cap.models.DBSession.add(managers)
         cap.models.DBSession.add(users)
 
         # Add users
+        cap.models.DBSession.add(cap.auth.User(name="admin", password="admin",
+                                                groups=[admins]))
         cap.models.DBSession.add(cap.auth.User(name="admin", password="admin",
                                                 groups=[admins]))
         cap.models.DBSession.add(cap.auth.User(name="manager",
@@ -103,3 +102,4 @@ def main(argv=sys.argv):
                                                      owner=glendora))
         cap.models.DBSession.add(cap.models.Location(display_name='Ontario',
                                                      owner=ontario))
+        '''

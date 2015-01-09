@@ -16,9 +16,9 @@ class SrbbStack(pyramid.scaffolds.PyramidTemplate):
     summary = ("Sets up a standard RESTful Pyramid application and front end "
             "using SQLAlchemy, Require.js, Backbone.js, and Bootstrap.")
 
-    def _gen_sec(self):
+    def _gen_sec(self, entropy=secret_entropy):
         return pyramid.compat.native_(
-            binascii.hexlify(os.urandom(self.secret_entropy)))
+            binascii.hexlify(os.urandom(entropy)))
 
     def pre(self, command, output_dir, variables):
         """Add some additional variables for use as secrets.
@@ -26,6 +26,7 @@ class SrbbStack(pyramid.scaffolds.PyramidTemplate):
         variables['dev_auth_tkt_secret'] = self._gen_sec()
         variables['stage_auth_tkt_secret'] = self._gen_sec()
         variables['prod_auth_tkt_secret'] = self._gen_sec()
+        variables['auth_identity_secret'] = self._gen_sec()
 
         if variables['package'] == 'core':
             raise ValueError('Sorry, you may not name your package "core". '

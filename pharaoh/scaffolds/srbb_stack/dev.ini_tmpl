@@ -30,6 +30,8 @@ datetime.time_format = %%I:%%M:%%S%%p
 
 # Enable SQLAlchemy and models. 
 database.enable = true
+# Drop all tables when running the database initialization script.
+database.initialize.drop_all = true
 database.epoch = 1970-1-1
 database.timezone = UTC
 
@@ -41,11 +43,35 @@ auth.enable = true
 #   will return a valid User object.
 auth.get_user_func = core.models.auth.get_user
 
-# Enable authentication models.
+# Initialize database with the following values.
+# groupname:level
+auth.initialize.groups =
+    roots:256
+    admins:128
+    users:8
+
+# username:password:group1[, group2, group3]
+auth.initialize.users =
+    root:rootpass:roots
+    admin:adminpass:admins
+    user:userpass:users
+
+# Enable authentication database models.
 authn.models.enable = true
+# Authentication database table names.
 authn.models.user.tablename = users
 authn.models.group.tablename = groups
 authn.models.user_group.tablename = users_groups
+# Set an identity secret. (Note: If this is changed, it will revoke
+#   authentication for all users. You will have to execute
+#   User.set_ident() on all users to recover.)
+authn.models.identity.secret = {{auth_identity_secret}}
+# This setting will enable the use of the password for identity as well
+#   as the username. (If either a username or password changes,
+#   authentication for that user is revoked. Note: If this is changed,
+#   it will revoke authentication for all users. You will have to
+#   execute User.set_ident() on all users to recover.)
+authn.models.identity.use_password = true
 
 # Enable authorization models.
 authz.models.enable = true
@@ -59,16 +85,16 @@ authz.models.permissions.tablename = permissions
 sqlalchemy.url = sqlite:///%(here)s/{{project}}.sqlite
 
 # The number of connections to keep open inside the connection pool.
-sqlalchemy.pool_size = 5
+# sqlalchemy.pool_size = 5
 
 # This setting causes the pool to recycle connections after the given
 #   number of seconds has passed.
-sqlalchemy.pool_recycle = 3660
+# sqlalchemy.pool_recycle = 3660
 
-# The number of connections to allow in connection pool “overflow”,
+# The number of connections to allow in connection pool "overflow",
 #   that is connections that can be opened above and beyond the
 #   pool_size setting, which defaults to five.
-sqlalchemy.max_overflow = 10
+# sqlalchemy.max_overflow = 10
 
 
 ###
