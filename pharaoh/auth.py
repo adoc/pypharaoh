@@ -17,6 +17,9 @@ def auth_tkt_from_config(settings, callback=None, prefix="auth_tkt"):
     if jk('secret') not in settings:
         raise KeyError(""""secret" is required to configure """
                 """AuthTktAuthenticationPolicy.""")
+    else:
+        secret = settings[jk('secret')]
+        del settings[jk('secret')]
 
     if jk('callback') in settings:
         raise KeyError(""""callback" is not expected in the config ini for """

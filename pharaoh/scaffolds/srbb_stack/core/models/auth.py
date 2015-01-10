@@ -92,11 +92,12 @@ def init_auth_models(settings):
         def _gen_hash(self, *args, alg=hashlib.sha512):
             hash_ = alg()
             for arg in args:
-                try:
-                    value = arg.encode()
-                except AttributeError:
-                    value = arg
-                hash_.update(value)
+                if arg:
+                    try:
+                        value = arg.encode()
+                    except AttributeError:
+                        value = arg
+                    hash_.update(value)
             return hash_.digest()
 
         def set_ident(self):
@@ -105,7 +106,7 @@ def init_auth_models(settings):
                 args += (ident_secret,)
             ident_nonce = os.urandom(8)
             args += (ident_nonce, self.name)
-            if ident_use_password and self.passhash:
+            if ident_use_password:
                 args += (self.pass_salt, self.passhash)
             self.ident = self._gen_hash(*args, alg=hashlib.sha256)
 

@@ -3,25 +3,18 @@
 # SRBB Stack
 ###
 
-[app:main]
-use = egg:{{project}}
 
-pyramid.reload_templates = true
-pyramid.debug_authorization = false
-pyramid.debug_notfound = false
-pyramid.debug_routematch = false
-pyramid.default_locale_name = en
-pyramid.includes =
-    pyramid_debugtoolbar
-    pyramid_tm
-    pyramid_mako
+[composite:main] 
+use = call:core:core_factory
+/ = web 
+/api = api
+/admin = admin 
 
-mako.imports = 
-    import json
 
+[DEFAULT]
 
 ###
-#  Application Specific Settings
+#  Application specificationfic Settings
 ###
 
 # Date/Time formats.
@@ -34,6 +27,7 @@ database.enable = true
 database.initialize.drop_all = true
 database.epoch = 1970-1-1
 database.timezone = UTC
+
 
 # Enable authentication and authorization.
 auth.enable = true
@@ -154,6 +148,56 @@ auth_tkt.reissue_time = 120
 auth_tkt.hashalg = sha512
 
 
+[app:api]
+use = call:api:main
+
+pyramid.default_locale_name = en
+pyramid.debug_authorization = false
+pyramid.debug_notfound = false
+pyramid.debug_routematch = false
+
+pyramid.includes =
+    pyramid_debugtoolbar
+    pyramid_tm
+
+
+[app:admin]
+use = call:admin:main
+
+pyramid.default_locale_name = en
+pyramid.reload_templates = true
+pyramid.debug_authorization = false
+pyramid.debug_notfound = false
+pyramid.debug_routematch = false
+
+pyramid.includes =
+    pyramid_debugtoolbar
+    pyramid_tm
+    pyramid_mako
+
+mako.imports = 
+    import json
+
+
+[app:web]
+use = egg:{{project}}
+
+pyramid.default_locale_name = en
+pyramid.reload_templates = true
+pyramid.debug_authorization = false
+pyramid.debug_notfound = false
+pyramid.debug_routematch = false
+
+pyramid.includes =
+    pyramid_debugtoolbar
+    pyramid_tm
+    pyramid_mako
+
+mako.imports = 
+    import json
+
+
+#
 
 static_dir = {{project}}:static/
 
@@ -165,11 +209,11 @@ cache_max_age = 0
 
 
 # Simple hack to properly handle client_addr for reverse proxied clients.
-filter-with = proxy-prefix
+# filter-with = main_proxy_prefix
 
-[filter:proxy-prefix]
-use = egg:PasteDeploy#prefix
-prefix = /
+# [filter:main_proxy_prefix]
+# use = egg:PasteDeploy#prefix
+# prefix = /
 
 
 [server:main]

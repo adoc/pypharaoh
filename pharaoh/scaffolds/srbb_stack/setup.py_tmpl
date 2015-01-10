@@ -9,6 +9,7 @@ with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 
 requires = [
+    #   'rutter',   # Paste `urlmap` for Python 3.
     'pyramid',
     'pyramid_mako',
     'pyramid_debugtoolbar',
@@ -18,9 +19,13 @@ requires = [
     'transaction',
     'zope.sqlalchemy',
     'waitress',
-    'pytz',
-    'uwsgi'
+    'pytz'
     ]
+
+# Only attempt to install uWSGI on a POSIX machine.
+if os.name == 'posix':
+    requires.append('uwsgi')
+
 
 setup(name='{{project}}',
       version='0.0.1',
@@ -43,8 +48,11 @@ setup(name='{{project}}',
       install_requires=requires,
       entry_points="""\
       [paste.app_factory]
-      main = {{package}}:main
+      core = core:main
+      main = {{project}}:main
+      api = api:main
+      admin = admin:main
       [console_scripts]
-      initialize_{{project}}_db = {{package}}.scripts.initializedb:main
+      initialize_core_db = core.scripts.initializedb:main
       """,
       )

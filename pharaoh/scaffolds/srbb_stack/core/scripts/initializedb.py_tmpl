@@ -1,0 +1,48 @@
+import os
+import sys
+import transaction
+import sqlalchemy
+import pyramid.paster
+import pyramid.config
+import pyramid.scripts.common
+
+import core
+import core.models
+
+def usage(argv):
+    cmd = os.path.basename(argv[0])
+    print('usage: %s <config_uri> [var=value]\n'
+          '(example: "%s development.ini")' % (cmd, cmd))
+    sys.exit(1)
+
+
+def main(argv=sys.argv):
+    if len(argv) < 2:
+        usage(argv)
+    config_uri = argv[1]
+    options = pyramid.scripts.common.parse_vars(argv[2:])
+    pyramid.paster.setup_logging(config_uri)
+    settings = pyramid.paster.get_appsettings(config_uri, options=options)
+
+    config = pyramid.config.Configurator(settings=settings)
+
+    core.init_core(settings, config)
+
+    if settings['database.initialize.drop_all']:
+        core.models.Base.metadata.drop_all(core.models.Engine)
+
+    core.models.Base.metadata.create_all(core.models.Engine)
+
+    # Initialize Auth Models
+    with transaction.manager:
+        groups = {}
+        for init_group in settings['auth.initialize.groups']:
+            groups[init_group['name']] = core.models.auth.Group(**init_group)
+            core.models.Session.add(groups[init_group['name']])
+
+        for init_user in settings['auth.initialize.users']:
+            user_groups = [groups[name] for name in init_user['groups']]
+            del init_user['groups']
+            user = core.models.auth.User(**init_user)
+            user.groups.extend(user_groups)
+            core.models.Session.add(user)
