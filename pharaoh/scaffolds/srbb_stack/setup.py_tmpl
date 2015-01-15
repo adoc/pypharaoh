@@ -8,19 +8,22 @@ with open(os.path.join(here, 'README.md')) as f:
 with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 
+
 requires = [
-    #   'rutter',   # Paste `urlmap` for Python 3.
+    'rutter',   # Paste `urlmap` for Python 3.
     'pyramid',
     'pyramid_mako',
+    'pyramid_beaker',
     'pyramid_debugtoolbar',
     'pyramid_tm',
-    'sqlalchemy',
-    'formencode',
     'transaction',
     'zope.sqlalchemy',
-    'waitress',
-    'pytz'
+    'sqlalchemy',
+    'formencode',
+    'pytz',
+    'waitress'
     ]
+
 
 # Only attempt to install uWSGI on a POSIX machine.
 if os.name == 'posix':

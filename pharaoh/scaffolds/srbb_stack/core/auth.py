@@ -24,7 +24,6 @@ def init_auth(settings):
     def get_this_user(request):
         """
         """
-
         userid = pyramid.security.unauthenticated_userid(request)
         if userid:
             return get_user(userid, request)

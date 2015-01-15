@@ -26,8 +26,7 @@ def init_models(settings):
         impl = sqlalchemy.types.Integer
         epoch = (datetime.datetime.strptime(settings['database.epoch'],
                                             settings['datetime.date_format'])
-                                    .replace(tzinfo=pytz.timezone(
-                                                settings['database.timezone'])))
+                                    .replace(tzinfo=settings['database.timezone']))
 
         def process_bind_param(self, value, dialect):
             return (value - self.epoch).total_seconds()

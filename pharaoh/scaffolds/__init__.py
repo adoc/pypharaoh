@@ -28,6 +28,7 @@ class SrbbStack(pyramid.scaffolds.PyramidTemplate):
         variables['stage_auth_tkt_secret'] = self._gen_sec()
         variables['prod_auth_tkt_secret'] = self._gen_sec()
         variables['auth_identity_secret'] = self._gen_sec()
+        variables['beaker_session_secret'] = self._gen_sec()
 
         if variables['package'] == 'core':
             raise ValueError('Sorry, you may not name your package "core". '

@@ -1,17 +1,12 @@
 import pyramid.config
 
+import core
+
 
 def main(global_config, **local_config):
     print("Initializing Platform Admin Dashboard...")
 
-    config = pyramid.config.Configurator(settings=local_config)
+    config, settings = core.init_config(global_config, local_config)
 
-
-    if 'authentication_policy' in global_config:
-        config.set_authentication_policy(global_config['authentication_policy'])
-
-    if 'authorization_policy' in global_config:
-        config.set_authorization_policy(global_config['authorization_policy'])
-
-
+    config.scan('admin.views')
     return config.make_wsgi_app()

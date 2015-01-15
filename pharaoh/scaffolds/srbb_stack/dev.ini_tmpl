@@ -7,19 +7,28 @@
 [composite:main] 
 use = call:core:core_factory
 / = web 
-/api = api
+/api/v1 = api
 /admin = admin 
 
 
-[DEFAULT]
+[filter:proxy_handle]
+# Use `prefix` to parse web server reverse proxy environment data.
+use = egg:PasteDeploy#prefix
 
+
+[DEFAULT]
 ###
 #  Application specificationfic Settings
 ###
+site.meta.title = SRBB
+site.meta.description = SRBB Scaffolding base installation.
+site.meta.author = http://github.com/adoc
+site.meta.footer = Nicholas Long. All Rights Reserved.
 
 # Date/Time formats.
 datetime.date_format = %%Y-%%m-%%d
 datetime.time_format = %%I:%%M:%%S%%p
+datetime.local_timezone = US/Pacific
 
 # Enable SQLAlchemy and models. 
 database.enable = true
@@ -28,15 +37,21 @@ database.initialize.drop_all = true
 database.epoch = 1970-1-1
 database.timezone = UTC
 
-
 # Enable authentication and authorization.
 auth.enable = true
+
+# Authentication URI's.
+# auth.uri.login = /login
+# auth.uri.logout = /logout
+# auth.uri.after_logout = /
+
 # Dotted python name for function that is passed a user id
 #   (or other identifier) and returns a User object or None.
 #   If "authn.models" is disabled, replace this with a function that
 #   will return a valid User object.
 auth.get_user_func = core.models.auth:get_user
 
+# TODO: Put in to "authn.models" namespace.
 # Initialize database with the following values.
 # groupname:level
 auth.initialize.groups =
@@ -44,7 +59,7 @@ auth.initialize.groups =
     admins:128
     users:8
 
-# username:password:group1[, group2, group3]
+# username:password:group1[,group2,group3]
 auth.initialize.users =
     root:rootpass:roots
     admin:adminpass:admins
@@ -70,6 +85,12 @@ authn.models.identity.use_password = true
 # Enable authorization models.
 authz.models.enable = true
 authz.models.permissions.tablename = permissions
+
+authz.root_factory.permissions =
+    allow:root:all
+    allow:admins:admin,edit,view,public
+    allow:users:view,public
+    allow:all:public,admin
 
 
 ###
@@ -150,6 +171,7 @@ auth_tkt.hashalg = sha512
 
 [app:api]
 use = call:api:main
+filter-with = proxy_handle
 
 pyramid.default_locale_name = en
 pyramid.debug_authorization = false
@@ -159,10 +181,14 @@ pyramid.debug_routematch = false
 pyramid.includes =
     pyramid_debugtoolbar
     pyramid_tm
+
+auth.uri.login = /login
+auth.uri.logout = /logout
 
 
 [app:admin]
 use = call:admin:main
+filter-with = proxy_handle
 
 pyramid.default_locale_name = en
 pyramid.reload_templates = true
@@ -177,10 +203,12 @@ pyramid.includes =
 
 mako.imports = 
     import json
+    import datetime
 
 
 [app:web]
 use = egg:{{project}}
+filter-with = proxy_handle
 
 pyramid.default_locale_name = en
 pyramid.reload_templates = true
@@ -192,28 +220,29 @@ pyramid.includes =
     pyramid_debugtoolbar
     pyramid_tm
     pyramid_mako
+    pyramid_beaker
 
 mako.imports = 
     import json
+    import datetime
+
+beaker.session.type = memory
+beaker.session.secret = {{beaker_session_secret}}
+beaker.session.key = {{project}}_session
+
+# uri|directory|cache_max_age
+static.mapping =
+    static|{{project}}:static/|0
+static.serve = true
 
 
-#
+#######
 
-static_dir = {{project}}:static/
 
-cache_max_age = 0
 
 # By default, the toolbar only appears for clients from IP addresses
 # '127.0.0.1' and '::1'.
 # debugtoolbar.hosts = 127.0.0.1 ::1
-
-
-# Simple hack to properly handle client_addr for reverse proxied clients.
-# filter-with = main_proxy_prefix
-
-# [filter:main_proxy_prefix]
-# use = egg:PasteDeploy#prefix
-# prefix = /
 
 
 [server:main]

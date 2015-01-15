@@ -27,32 +27,56 @@ This is our basic application stack. It includes the following primary modules.
 * [Formencode](http://www.formencode.org/en/latest/) for data validation.
 * [pyTZ](http://pytz.sourceforge.net/) for timezone handling.
 
+
+#### Possible structure
+
+``api``, ``admin`` and ``web`` modules may not reference each other as we do not want them coupled with each other.
+
+```
++==	[package]\
+	+== api\
+	+== admin\
+		+== assets\
+		+== templates\
+	+==	web\
+		+==	assets\
+		+== templates\
+	+== models\
+	+== validators\
+	+== auth\
+	+==	static\
+```
+
+
 #### Platform Directory Structure
 
 ```
-+-- [package]\		Main application directory.
-|	+-- scripts\		Database initialization and console scripts.  
-|	+--	static\ 		Front End static assets, templates, and framework implementations.
-|	|	+-- css\			Cascading StyleSheets
-|	|	|	+-- lib\			3rd Party Stylesheets (Bootstrap)
++== [package]\		Main web application directory.
+|	+==	static\ 		Front End static assets, templates, and framework implementations.
+|	|	+== css\			Cascading StyleSheets
+|	|	|	+== lib\			3rd Party Stylesheets (Bootstrap)
 |	|	|	+--	style.css 		Site main style sheet
-|	|	+--	js\				Javascript
-|	|	|	+--	lib\			3rd Party Javascript (Require, Backbone, etc.)
+|	|	+==	img\			Images
+|	|	+==	js\				Javascript
+|	|	|	+==	lib\			3rd Party Javascript (Require, Backbone, etc.)
 |	|	|	+--	models.js		Backbone.js Models/Collections
 |	|	|	+--	templates.js	
 |	|	|	+-- views.js
-|	|	+--	tmpl\  			Underscore Rendered Templates
-|	+-- models\
+|	|	+==	tmpl\  			Underscore Rendered Templates
+|	+== models\
 |		+--	__init__.py
-|	+--	templates\
-|	+-- views\
+|	+==	templates\
+|	+== views\
 |		+--	__init__.py
-+--	core\
-|	+--	models\
++==	core\			Library shared by the Webapp, Admin panel and RESTful API.
+|	+== scripts\		Database initialization and console scripts.  
+|	+==	models\			Data models.
 |	|	+--	__init__.py
-|	|	+--	auth.py
-|	+--	validators\		Data validators used by all facets of the platform.
-|		+--	__init__.py  
+|	|	+--	auth.py			Authentication Data models.
+|	+==	validators\		Data validators.
+|		+--	__init__.py
+|	+-- __init__.py
+|	+--	auth.py			Authentication functions.
 +--	CHANGES.txt  	CHANGES file.
 +--	MANIFEST.in  	MANIFEST file.
 +--	README.md  		README markdown file.

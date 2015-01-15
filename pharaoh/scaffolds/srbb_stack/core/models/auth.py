@@ -4,6 +4,7 @@ import hashlib
 import sqlalchemy
 import sqlalchemy.types
 import sqlalchemy.orm.exc
+import sqlalchemy.ext.hybrid
 
 import core.models
 
@@ -23,6 +24,19 @@ def get_user(userident):
         return None
 
 
+def get_user_byname(username):
+    """
+    """
+
+    try:
+        return (core.models.Session
+                    .query(User)
+                    .filter(User.name==username)
+                    .one())
+    except sqlalchemy.orm.exc.NoResultFound:
+        return None
+
+
 def init_auth_models(settings):
     """
     """
@@ -30,7 +44,6 @@ def init_auth_models(settings):
     global UserGroup
     global Group
     global User
-    global get_user
 
     user_tablename = settings.get('authn.models.user.tablename', 'users').strip()
     group_tablename = settings.get('authn.models.group.tablename', 'groups').strip()
@@ -76,9 +89,8 @@ def init_auth_models(settings):
         id = sqlalchemy.Column(sqlalchemy.types.Integer, primary_key=True)
         _name = sqlalchemy.Column('name', sqlalchemy.types.String(length=64),
                                     unique=True, index=True)
-        #ident_salt = sqlalchemy.Column('ident_salt',
-        #                            sqlalchemy.LargeBinary(length=8),
-        #                            default=lambda: os.urandom(8))
+        email = sqlalchemy.Column(sqlalchemy.types.String(length=64),
+                                    unique=True, index=True)
         ident = sqlalchemy.Column(sqlalchemy.types.LargeBinary(length=32),
                                     unique=True, index=True)
         pass_salt = sqlalchemy.Column('pass_salt',
@@ -119,20 +131,6 @@ def init_auth_models(settings):
             self._name = name
             self.set_ident()
 
-        '''
-        @property
-        def ident_salt(self):
-            if not self._ident_salt:
-                self._ident_salt = os.urandom(8)
-            return self._ident_salt'''
-
-        '''
-        @property
-        def pass_salt(self):
-            if not self._pass_salt: 
-                self._pass_salt = os.urandom(8)
-            return self._pass_salt'''
-
         @property
         def password(self):
             raise ValueError("Cannot get a password.")
@@ -146,12 +144,21 @@ def init_auth_models(settings):
         def check_password(self, challenge):
             return self.passhash == self._gen_hash(self.pass_salt, challenge)
 
-        @property
+        @sqlalchemy.ext.hybrid.hybrid_property
         def level(self):
             return max([group.level for group in self.groups])
+
+        @level.expression
+        def level(cls):
+            return (sqlalchemy.select([
+                        sqlalchemy.func.max(Group.level)])
+                    .where(UserGroup.userid == cls.id)
+                    .where(UserGroup.groupid == Group.id)
+                    .label('level'))
 
         def __json__(self, request):
             return {
                 'id': self.id,
-                'name': self.name
+                'name': self.name,
+                'email': self.email
             }
