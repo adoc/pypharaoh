@@ -34,14 +34,15 @@ This is our basic application stack. It includes the following primary modules.
 
 ```
 +==	[package]\
-	+== api\
 	+== admin\
 		+== assets\
 		+== templates\
 	+==	web\
 		+==	assets\
 		+== templates\
+	+== api\
 	+== models\
+	+== scripts\
 	+== validators\
 	+== auth\
 	+==	static\

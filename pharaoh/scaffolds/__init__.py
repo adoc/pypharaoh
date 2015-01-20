@@ -12,7 +12,7 @@ class SrbbStack(pyramid.scaffolds.PyramidTemplate):
     """SQLAlchemy, Require, Backbone, Bootstrap
     """
     secret_entropy = 32    # In Bytes
-    _template_dir = 'srbb_stack'
+    _template_dir = 'srbb_stack2'
     summary = ("Sets up a standard RESTful Pyramid application and front end "
             "using SQLAlchemy, Require.js, Backbone.js, and Bootstrap.")
 
