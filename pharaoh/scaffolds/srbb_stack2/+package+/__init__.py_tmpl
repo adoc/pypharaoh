@@ -14,13 +14,13 @@ import pyramid.path
 
 import pharaoh.auth
 
-import core.models
-import core.models.auth
-import core.auth
+from {{project}} import db
+from {{project}} import models
+from {{project}} import auth
 
+# import core.models.auth
 
 from pprint import pprint
-
 
 
 class RootFactory:
@@ -81,7 +81,7 @@ def init_settings(settings):
     settings['auth.initialize.users'] = list(parse_users())
 
     settings['auth.get_user_func'] = resolver.resolve(
-                settings.get('auth.get_user_func', 'core.models.auth:get_user'))
+                settings.get('auth.get_user_func', '.models.auth:get_user'))
 
     settings['authn.models.enable'] = pyramid.settings.asbool(
                                     settings.get('authn.models.enable', False))
@@ -161,6 +161,9 @@ def init_config(global_config, local_config):
     caller = pyramid.path.caller_package()
     resolver = pyramid.path.DottedNameResolver(caller)
 
+
+    # TODO: Configure these in the subapp seems a better factor.
+    '''
     if any(key in settings for key in ['auth.uri.login', 'auth.uri.logout']):
         try:
             auth_views = resolver.resolve('.views.auth')
@@ -172,8 +175,13 @@ def init_config(global_config, local_config):
 
         if 'auth.uri.login' in settings:
             config.add_route('auth.uri.login', settings['auth.uri.login'])
-            config.add_view(auth_views.login_view, route_name='auth.uri.login',
-                            renderer=auth_views.login_view.renderer)
+            # print(dir(auth_views.login_view))
+            if hasattr(auth_views.login_view, '__venusian_callbacks__'):
+                pass
+            else:
+                config.add_view(auth_views.login_view,
+                                    route_name='auth.uri.login',
+                                    renderer=auth_views.login_view.renderer)
 
         if 'auth.uri.logout' in settings:
             config.add_route('auth.uri.logout', settings['auth.uri.logout'])
@@ -184,6 +192,7 @@ def init_config(global_config, local_config):
         if 'auth.uri.after_logout' in settings:
             config.add_route('auth.uri.after_logout',
                                             settings['auth.uri.after_logout'])
+    '''
 
     if 'authentication_policy' in settings:
         config.set_authentication_policy(settings['authentication_policy'])
@@ -216,8 +225,9 @@ def init_config(global_config, local_config):
     return config, settings
 
 
-def core_factory(loader, global_config, **local_config):
-    """
+def boot_factory(loader, global_config, **local_config):
+    """Configure core of the application. (Shared libraries and
+    models.)
     """
 
     print("Initializing Platform Core...")
@@ -225,21 +235,22 @@ def core_factory(loader, global_config, **local_config):
 
     if global_config['database.enable']:
         print("    Database Models...")
-        core.models.init_models(global_config)
+        db.init(global_config)
+        models.init(global_config)
 
     if all([global_config['auth.enable'],
             global_config['authn.models.enable'],
             global_config['database.enable']]):
         print("    Auth Models...")
-        core.models.auth.init_auth_models(global_config)
+        models.auth.init_auth_models(global_config)
 
     if global_config['auth.enable']:
         print("    Auth Policies...")
-        core.auth.init_auth(global_config)
+        auth.init_auth(global_config)
 
         global_config['authentication_policy'] = (
                                 pharaoh.auth.auth_tkt_from_config(global_config,
-                                    callback=core.auth.get_groups))
+                                    callback=auth.get_groups))
 
         global_config['authorization_policy'] = (
                                 pyramid.authorization.ACLAuthorizationPolicy())

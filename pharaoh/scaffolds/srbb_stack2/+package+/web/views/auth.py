@@ -1,3 +1,10 @@
+"""Web Application Authentication Views.
+"""
+
+
+import pyramid.view
+import pyramid.security
+
 
 
 def unauthorized_view(request):
@@ -23,7 +30,8 @@ def login_view(request):
         user = get_user(request, user_name)
         if user and user.check_password(passwd):
             headers = pyramid.security.remember(request, user_name)
-            return pyramid.httpexceptions.HTTPFound(location=next, headers=headers)
+            return pyramid.httpexceptions.HTTPFound(location=next,
+                                                    headers=headers)
         else:
             return {'failed': True}
     return {}

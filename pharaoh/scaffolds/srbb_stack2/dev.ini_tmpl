@@ -1,18 +1,21 @@
 ###
+# SRBB Stack Scaffolding
+#   author: https://github.com/adoc
+#
 # {{project}} Application Development Configuration
-# SRBB Stack
 ###
 
 
 [composite:main] 
-use = call:core:core_factory
+use = call:{{project}}:boot_factory
 / = web 
-/api/v1 = api
-/admin = admin 
+# /api/v1 = api
+# /admin = admin 
 
 
 [filter:proxy_handle]
-# Use `prefix` to parse web server reverse proxy environment data.
+# Use ``paste.deploy.prefix`` to parse web server reverse proxy
+#   environment data.
 use = egg:PasteDeploy#prefix
 
 
@@ -49,7 +52,7 @@ auth.enable = true
 #   (or other identifier) and returns a User object or None.
 #   If "authn.models" is disabled, replace this with a function that
 #   will return a valid User object.
-auth.get_user_func = core.models.auth:get_user
+auth.get_user_func = {{project}}.models.auth:get_user
 
 # TODO: Put in to "authn.models" namespace.
 # Initialize database with the following values.
@@ -170,7 +173,7 @@ auth_tkt.hashalg = sha512
 
 
 [app:api]
-use = call:api:main
+use = call:{{project}}.api:main
 filter-with = proxy_handle
 
 pyramid.default_locale_name = en
@@ -182,12 +185,9 @@ pyramid.includes =
     pyramid_debugtoolbar
     pyramid_tm
 
-auth.uri.login = /login
-auth.uri.logout = /logout
-
 
 [app:admin]
-use = call:admin:main
+use = call:{{project}}.admin:main
 filter-with = proxy_handle
 
 pyramid.default_locale_name = en
@@ -205,9 +205,14 @@ mako.imports =
     import json
     import datetime
 
+static.mapping =
+    static|{{project}}:static/|0
+    assets|{{project}}.admin:assets/|0
+static.serve = true
+
 
 [app:web]
-use = egg:{{project}}
+use = call:{{project}}.web:main
 filter-with = proxy_handle
 
 pyramid.default_locale_name = en
@@ -222,9 +227,14 @@ pyramid.includes =
     pyramid_mako
     pyramid_beaker
 
+mako.directories = {{project}}.web:templates
+
 mako.imports = 
     import json
     import datetime
+
+auth.uri.login = /login
+auth.uri.logout = /logout
 
 beaker.session.type = memory
 beaker.session.secret = {{beaker_session_secret}}
@@ -233,11 +243,11 @@ beaker.session.key = {{project}}_session
 # uri|directory|cache_max_age
 static.mapping =
     static|{{project}}:static/|0
+    assets|{{project}}.web:assets/|0
 static.serve = true
 
 
 #######
-
 
 
 # By default, the toolbar only appears for clients from IP addresses

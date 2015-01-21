@@ -1,4 +1,4 @@
-"""Web Application Initialization
+"""Administration Panel Initialization.
 """
 
 import {{project}}
@@ -7,8 +7,10 @@ import {{project}}
 def main(global_config, **local_config):
     """This function returns a Pyramid WSGI application.
     """
-    print("Initializing Platform Web Application...")
+    
+    print("Initializing Platform Admin Dashboard...")
 
+    # Core module 
     config, settings = {{project}}.init_config(global_config, local_config)
 
     config.add_mako_renderer('.html_mako')
@@ -19,8 +21,7 @@ def main(global_config, **local_config):
 
     config.add_route('home', '/')
 
-    # Don't add auth views at this time.
-    config.scan('{{project}}.web.views',
-                    ignore='{{project}}.web.views.auth')
+    config.scan('{{project}}.admin.views',
+                    ignore='{{project}}.admin.views.auth')
 
     return config.make_wsgi_app()

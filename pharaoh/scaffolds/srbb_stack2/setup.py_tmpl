@@ -51,11 +51,13 @@ setup(name='{{project}}',
       install_requires=requires,
       entry_points="""\
       [paste.app_factory]
-      core = core:main
-      main = {{project}}:main
-      api = api:main
-      admin = admin:main
+      api = {{project}}.api:main
       [console_scripts]
       initialize_core_db = core.scripts.initializedb:main
       """,
       )
+
+# main = {{project}}:main
+# core = core:main
+# api = api:main
+# admin = admin:main

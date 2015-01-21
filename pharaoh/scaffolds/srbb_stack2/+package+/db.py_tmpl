@@ -1,0 +1,26 @@
+"""Database Engine and Session provided by SQLAlchemy.
+"""
+
+import sqlalchemy
+import sqlalchemy.orm
+import zope.sqlalchemy
+
+from {{project}} import models
+
+
+Session = sqlalchemy.orm.scoped_session(
+                sqlalchemy.orm.sessionmaker(
+                    extension=zope.sqlalchemy.ZopeTransactionExtension()))
+
+
+def init(settings):
+    """Initialize Database Engine and bind the ``models`` Base
+    metadata.
+    """
+
+    # ``Engine`` as a module level variable.
+    global Engine
+
+    Engine = sqlalchemy.engine_from_config(settings, 'sqlalchemy.')
+    Session.configure(bind=Engine)
+    models.Base.metadata.bind = Engine
