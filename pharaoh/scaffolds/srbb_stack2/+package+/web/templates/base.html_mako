@@ -16,7 +16,7 @@
                 <p class="text-muted">&copy; ${datetime.date.today().year} ${request.site_meta_footer}.</p>
             </div>
         </footer>
-        <script type="text/javascript" src="${request.static_map_url('static', 'js/lib/require.min.js')}"></script>
+        <script type="text/javascript" src="${request.static_map_url('static', 'js/require.min.js')}"></script>
         <script type="text/javascript" src="${request.route_url('common.js')}"></script>
     %if hasattr(next, "scripts"):
         <script type="text/javascript">

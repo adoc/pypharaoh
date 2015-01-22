@@ -10,13 +10,24 @@
 use = call:{{project}}:boot_factory
 / = web 
 # /api/v1 = api
-# /admin = admin 
+/admin = admin 
 
 
-[filter:proxy_handle]
 # Use ``paste.deploy.prefix`` to parse web server reverse proxy
-#   environment data.
+#   environment data. "prefix" must match the prefix used in the
+#   "composite" section.
+[filter:proxy_handle_web]
+prefix = /
 use = egg:PasteDeploy#prefix
+
+[filter:proxy_handle_admin]
+prefix = /admin
+use = egg:PasteDeploy#prefix
+
+[filter:proxy_handle_api]
+prefix = /api
+use = egg:PasteDeploy#prefix
+
 
 
 [DEFAULT]
@@ -93,7 +104,7 @@ authz.root_factory.permissions =
     allow:root:all
     allow:admins:admin,edit,view,public
     allow:users:view,public
-    allow:all:public,admin
+    allow:all:public
 
 
 ###
@@ -174,7 +185,7 @@ auth_tkt.hashalg = sha512
 
 [app:api]
 use = call:{{project}}.api:main
-filter-with = proxy_handle
+filter-with = proxy_handle_api
 
 pyramid.default_locale_name = en
 pyramid.debug_authorization = false
@@ -188,7 +199,7 @@ pyramid.includes =
 
 [app:admin]
 use = call:{{project}}.admin:main
-filter-with = proxy_handle
+filter-with = proxy_handle_admin
 
 pyramid.default_locale_name = en
 pyramid.reload_templates = true
@@ -201,6 +212,8 @@ pyramid.includes =
     pyramid_tm
     pyramid_mako
 
+mako.directories = {{project}}.admin:templates
+
 mako.imports = 
     import json
     import datetime
@@ -210,10 +223,18 @@ static.mapping =
     assets|{{project}}.admin:assets/|0
 static.serve = true
 
+# Enable common.js and config.js.
+base_js.enable = true
+base_js.prefix = /
+base_js.minify = false
+base_js.cache_max_age = 0
+base_js.permission = admin
+base_js.template.common =
+base_js.template.config =
 
 [app:web]
 use = call:{{project}}.web:main
-filter-with = proxy_handle
+filter-with = proxy_handle_web
 
 pyramid.default_locale_name = en
 pyramid.reload_templates = true
@@ -245,6 +266,16 @@ static.mapping =
     static|{{project}}:static/|0
     assets|{{project}}.web:assets/|0
 static.serve = true
+
+# Enable common.js and config.js.
+base_js.enable = true
+base_js.prefix = /
+base_js.minify = false
+base_js.cache_max_age = 0
+base_js.permission = public
+base_js.template.common =
+base_js.template.config =
+
 
 
 #######

@@ -1,18 +1,40 @@
 "use strict";
 
+/* Common.js for Administration Panel.
+*/
+
 require.config({
     baseUrl: "${request.static_map_path('static', 'js')}",
     paths: {
         config: "${request.route_path('config.js').rstrip('.js')}",
-        jquery: 'lib/jquery.min',
-        underscore: 'lib/underscore.min',
-        backbone: 'lib/backbone.min',
-        bootstrap: 'lib/bootstrap.min',
-        text: 'lib/text.min'
+        jquery: 'jquery.min',
+        jquery_ui: 'jquery-ui.min'
+        underscore: 'underscore.min',
+        backbone: 'backbone.min',
+        bootstrap: 'bootstrap.min',
+        text: 'text.min',
+        raphael: "${request.static_map_path('assets', 'js/raphael.min.js').rstrip('.js')}",
+        morris: "${request.static_map_path('assets', 'js/morris.min.js').rstrip('.js')}",
+        flot: "${request.static_map_path('assets', 'js/jquery.flot.js').rstrip('.js')}",
+        flot_tooltip: "${request.static_map_path('assets', 'js/jquery.flot.tooltip.min.js').rstrip('.js')}",
+        flot_resize: "${request.static_map_path('assets', 'js/jquery.flot.resize.js').rstrip('.js')}",
+        flot_pie: "${request.static_map_path('assets', 'js/jquery.flot.pie.js').rstrip('.js')}"
     },
     shim: {
         bootstrap: {
             deps: ['jquery']
+        },
+        flot: {
+            deps: ['jquery']
+        },
+        flot_tooltip: {
+            deps: ['flot']
+        },
+        flot_resize: {
+            deps: ['flot']
+        },
+        flot_pie: {
+            deps: ['flot']
         }
     }
 });

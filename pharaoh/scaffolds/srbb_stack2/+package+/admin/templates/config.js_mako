@@ -1,5 +1,8 @@
 "use strict";
 
+/* Config.js for Administration Panel.
+*/
+
 define([], function () {
     var Config = {};
 

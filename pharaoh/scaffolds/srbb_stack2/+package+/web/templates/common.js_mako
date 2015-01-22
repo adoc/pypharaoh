@@ -1,14 +1,17 @@
 "use strict";
 
+/* Common.js for Web Application.
+*/
+
 require.config({
     baseUrl: "${request.static_map_path('static', 'js')}",
     paths: {
         config: "${request.route_path('config.js').rstrip('.js')}",
-        jquery: 'lib/jquery.min',
-        underscore: 'lib/underscore.min',
-        backbone: 'lib/backbone.min',
-        bootstrap: 'lib/bootstrap.min',
-        text: 'lib/text.min'
+        jquery: 'jquery.min',
+        underscore: 'underscore.min',
+        backbone: 'backbone.min',
+        bootstrap: 'bootstrap.min',
+        text: 'text.min'
     },
     shim: {
         bootstrap: {
