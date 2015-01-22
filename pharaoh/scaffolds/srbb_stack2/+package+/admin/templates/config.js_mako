@@ -6,5 +6,9 @@
 define([], function () {
     var Config = {};
 
+    Config.uri = {
+        logout: ${json.dumps(request.route_path('auth.logout'))|n}
+    };
+
     return Config;
 });

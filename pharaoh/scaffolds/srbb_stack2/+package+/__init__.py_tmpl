@@ -11,6 +11,7 @@ import rutter.urlmap
 import pytz
 import pyramid.settings
 import pyramid.security
+import pyramid.httpexceptions
 import pyramid.path
 
 import pharaoh.auth
@@ -23,15 +24,6 @@ from {{project}} import auth
 from pprint import pprint
 
 
-class RootFactory:
-    """RootFactory used for all composite apps. ACL's are set from the
-    config ini.
-    """
-
-    def __init__(self, request):
-        self.request = request
-
-
 def js_view(request):
     """Reusable Javascript view.
     """
@@ -39,8 +31,14 @@ def js_view(request):
     return {}
 
 
+def logout_view(request):
+    """Logout view removes the cookie and redirects to the
+    "after_logout" route.
+    """
 
-
+    return pyramid.httpexceptions.HTTPFound(
+                            location=request.route_url('home'),
+                            headers=pyramid.security.forget(request))
 
 
 def init_settings(settings):
@@ -93,6 +91,10 @@ def init_settings(settings):
 
     settings['auth.get_user_func'] = resolver.resolve(
                 settings.get('auth.get_user_func', '.models.auth:get_user'))
+
+    settings['auth.get_user_byname_func'] = resolver.resolve(
+                settings.get('auth.get_user_byname_func',
+                                '.models.auth:get_user_byname'))
 
     settings['authn.models.enable'] = pyramid.settings.asbool(
                                     settings.get('authn.models.enable', False))
@@ -198,45 +200,79 @@ def init_config(global_config, local_config):
                                             property=True, reify=True)
 
     # TODO: Configure these in the subapp seems a better factor.
-    '''
     if any(key in settings for key in ['auth.uri.login', 'auth.uri.logout']):
         try:
             auth_views = resolver.resolve('.views.auth')
         except ImportError:
             # TODO: Find a better exception.
-            raise Exception("""auth.uri.* key(s) were specified in config """
+            log.warn("""auth.uri.* key(s) were specified in config """
                     """but no auth views for package "%s" were found.""" % 
                                                                 caller.__name__)
+            auth_views = resolver.resolve('.views')
+            auth_views.logout_view = logout_view
+
+        do_scan_auth = False
 
         if 'auth.uri.login' in settings:
-            config.add_route('auth.uri.login', settings['auth.uri.login'])
+            assert hasattr(auth_views, 'login_view')
+            config.add_route('auth.login', settings['auth.uri.login'])
             # print(dir(auth_views.login_view))
             if hasattr(auth_views.login_view, '__venusian_callbacks__'):
-                pass
+                do_scan_auth = True
             else:
                 config.add_view(auth_views.login_view,
-                                    route_name='auth.uri.login',
+                                    route_name='auth.login',
                                     renderer=auth_views.login_view.renderer)
 
         if 'auth.uri.logout' in settings:
-            config.add_route('auth.uri.logout', settings['auth.uri.logout'])
-            config.add_view(auth_views.logout_view,
-                            route_name='auth.uri.logout',
-                            renderer=auth_views.logout_view.renderer)
+            assert hasattr(auth_views, 'logout_view')
+            config.add_route('auth.logout', settings['auth.uri.logout'])
+
+            if hasattr(auth_views.logout_view, '__venusian_callbacks__'):
+                do_scan_auth = True
+            else:
+                config.add_view(auth_views.logout_view,
+                            route_name='auth.logout')
+
+        if do_scan_auth is True:
+            config.scan(auth_views)
 
         if 'auth.uri.after_logout' in settings:
             config.add_route('auth.uri.after_logout',
                                             settings['auth.uri.after_logout'])
-    '''
 
-    if 'authentication_policy' in settings:
-        config.set_authentication_policy(settings['authentication_policy'])
 
-    if 'authorization_policy' in settings:
-        config.set_authorization_policy(settings['authorization_policy'])
+    if settings['auth.enable'] is True:
+        print("    Auth Policies...")
+        auth.init_auth(config, settings)
 
-    if 'root_factory' in settings:
-        config.set_root_factory(settings['root_factory'])
+        config.set_authentication_policy(
+                        pharaoh.auth.auth_tkt_from_config(settings,
+                                    callback=auth.get_groups_callback))
+
+        config.set_authorization_policy(
+                            pyramid.authorization.ACLAuthorizationPolicy())
+
+        class RootFactory:
+            """RootFactory used for all composite apps. ACL's are
+            defined and parsedset from the config INI.
+            """
+
+            __acl__ = settings['authz.root_factory.permissions']
+
+            def __init__(self, request):
+                self.request = request
+
+        config.set_root_factory(RootFactory)
+
+    # if 'authentication_policy' in settings:
+    #    config.set_authentication_policy(settings['authentication_policy'])
+
+    # if 'authorization_policy' in settings:
+    #     config.set_authorization_policy(settings['authorization_policy'])
+
+    #if 'root_factory' in settings:
+    #    config.set_root_factory(settings['root_factory'])
 
     if 'static.mapping' in settings and settings['static.serve'] is True:
         static_map = settings['static.mapping']
@@ -258,6 +294,8 @@ def init_config(global_config, local_config):
         config.add_request_method(request_static_map('static_path'),
                                     name='static_map_path')
 
+    # Enable "common.js" and "config.js" routes as configured in the
+    #   INI.
     if settings['base_js.enable'] is True:
         prefix = settings['base_js.prefix']
 
@@ -295,21 +333,25 @@ def boot_factory(loader, global_config, **local_config):
             global_config['authn.models.enable'],
             global_config['database.enable']]):
         print("    Auth Models...")
-        models.auth.init_auth_models(global_config)
+        models.auth.init(global_config)
 
+    # Does this need to be configured in the factory??
+    #   Might make more sense in init_config
+    '''
     if global_config['auth.enable']:
         print("    Auth Policies...")
         auth.init_auth(global_config)
 
         global_config['authentication_policy'] = (
                                 pharaoh.auth.auth_tkt_from_config(global_config,
-                                    callback=auth.get_groups))
+                                    callback=auth.get_groups_callback))
 
         global_config['authorization_policy'] = (
                                 pyramid.authorization.ACLAuthorizationPolicy())
 
         RootFactory.__acl__ = global_config['authz.root_factory.permissions']
         global_config['root_factory'] = RootFactory
+    '''
 
     global_config['composite'] = local_config
 

@@ -8,7 +8,7 @@ require.config({
     paths: {
         config: "${request.route_path('config.js').rstrip('.js')}",
         jquery: 'jquery.min',
-        jquery_ui: 'jquery-ui.min'
+        jquery_ui: 'jquery-ui.min',
         underscore: 'underscore.min',
         backbone: 'backbone.min',
         bootstrap: 'bootstrap.min',
@@ -22,6 +22,9 @@ require.config({
     },
     shim: {
         bootstrap: {
+            deps: ['jquery']
+        },
+        morris: {
             deps: ['jquery']
         },
         flot: {

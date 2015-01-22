@@ -28,7 +28,10 @@ def auth_tkt_from_config(settings, callback=None, prefix="auth_tkt"):
     for key, val in settings.items():
         if key.startswith(prefix):
             key = key.split('.')[-1]
-            auth_tkt_kwa[key] = val
+            try:
+                auth_tkt_kwa[key] = int(val)
+            except ValueError:
+                auth_tkt_kwa[key] = val
 
     return pyramid.authentication.AuthTktAuthenticationPolicy(secret,
                                                                 **auth_tkt_kwa)

@@ -6,8 +6,9 @@ import pyramid.paster
 import pyramid.config
 import pyramid.scripts.common
 
-import core
-import core.models
+import {{project}}
+from {{project}} import db
+from {{project}} import models
 
 
 def usage(argv):
@@ -24,34 +25,35 @@ def main(argv=sys.argv):
     options = pyramid.scripts.common.parse_vars(argv[2:])
     pyramid.paster.setup_logging(config_uri)
     settings = pyramid.paster.get_appsettings(config_uri, options=options)
-    core.init_settings(settings)
+    {{project}}.init_settings(settings)
     config = pyramid.config.Configurator(settings=settings)
 
     if settings['database.enable']:
         print("    Database Models...")
-        core.models.init_models(settings)
+        db.init(settings)
+        models.init(settings)
 
     if all([settings['auth.enable'],
             settings['authn.models.enable'],
             settings['database.enable']]):
         print("    Auth Models...")
-        core.models.auth.init_auth_models(settings)
+        models.auth.init(settings)
 
     if settings['database.initialize.drop_all']:
-        core.models.Base.metadata.drop_all(core.models.Engine)
+        models.Base.metadata.drop_all(db.Engine)
 
-    core.models.Base.metadata.create_all(core.models.Engine)
+    models.Base.metadata.create_all(db.Engine)
 
     # Initialize Auth Models
     with transaction.manager:
         groups = {}
         for init_group in settings['auth.initialize.groups']:
-            groups[init_group['name']] = core.models.auth.Group(**init_group)
-            core.models.Session.add(groups[init_group['name']])
+            groups[init_group['name']] = models.auth.Group(**init_group)
+            db.Session.add(groups[init_group['name']])
 
         for init_user in settings['auth.initialize.users']:
             user_groups = [groups[name] for name in init_user['groups']]
             del init_user['groups']
-            user = core.models.auth.User(**init_user)
+            user = models.auth.User(**init_user)
             user.groups.extend(user_groups)
-            core.models.Session.add(user)
+            db.Session.add(user)

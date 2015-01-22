@@ -5,7 +5,7 @@
 import pyramid.view
 import pyramid.security
 
-
+from {{project}} import auth
 
 def unauthorized_view(request):
     """Return HTTPUnauthorized when user is logged in but unauthorized,
@@ -19,17 +19,16 @@ def unauthorized_view(request):
                 request.route_url('login', _query=(('next', request.path),)))
 
 
-@pyramid.view.view_config(route_name='login',
-                            renderer='templates/login.html.mako')
+@pyramid.view.view_config(route_name='auth.login',
+                            renderer='login.html_mako')
 def login_view(request):
     if 'submit' in request.POST:
         next = request.params.get('next') or request.route_url('home')
         user_name = request.POST.get('login', '')
         passwd = request.POST.get('password', '')
-
-        user = get_user(request, user_name)
+        user = request.get_user_byname(user_name)
         if user and user.check_password(passwd):
-            headers = pyramid.security.remember(request, user_name)
+            headers = pyramid.security.remember(request, user.ident_b64)
             return pyramid.httpexceptions.HTTPFound(location=next,
                                                     headers=headers)
         else:
@@ -37,7 +36,7 @@ def login_view(request):
     return {}
 
 
-# @pyramid.view.view_config(route_name='logout')
+@pyramid.view.view_config(route_name='auth.logout')
 def logout_view(request):
     """Logout view removes the cookie and redirects to the
     "after_logout" route.

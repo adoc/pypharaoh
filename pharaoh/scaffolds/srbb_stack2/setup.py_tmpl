@@ -53,7 +53,7 @@ setup(name='{{project}}',
       [paste.app_factory]
       api = {{project}}.api:main
       [console_scripts]
-      initialize_core_db = core.scripts.initializedb:main
+      initialize_core_db = {{project}}.scripts.initializedb:main
       """,
       )
 

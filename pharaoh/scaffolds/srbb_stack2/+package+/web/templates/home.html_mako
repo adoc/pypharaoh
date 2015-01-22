@@ -1,10 +1,10 @@
 <%inherit file="base.html_mako" />
+<%def name="scripts()">
+    require(['config', 'bootstrap'], function (Config, Bootstrap) {
+        console.log(Config);
+        console.log(Bootstrap);
+        });
+</%def>
 <div class="container">
     <h2>Welcome to the SRBB Scaffolding</h2>
 </div>
-
-<%def name="scripts()">
-    require(['config'], function (Config) {
-        console.log(Config);
-        });
-</%def>

@@ -1,0 +1,36 @@
+"""Hook API views.
+Note: This module should not be loaded from `admin` initialization but
+from `api` initialization.
+"""
+
+import pyramid.view
+
+from {{project}} import db
+from {{project}} import models
+
+
+from pprint import pprint
+
+
+@pyramid.view.view_config(route_name="api.info", renderer="json",
+                            permission="admin")
+def api_admin_info(request):
+    """
+    """
+
+    return {'tag': 'info',
+            'status': 'ok',
+            'data': {'this_user': request.this_user}}
+
+
+@pyramid.view.view_config(route_name="api.users", renderer="json",
+                            permission="admin")
+def api_admin_users(request):
+    """
+    """
+    this_user = request.this_user
+
+    return (db.Session
+                .query(models.auth.User)
+                .filter(this_user.level >= models.auth.User.level)
+                .all())

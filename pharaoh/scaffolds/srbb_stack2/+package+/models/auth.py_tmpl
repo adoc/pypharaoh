@@ -1,6 +1,7 @@
 import os
 import functools
 import hashlib
+import base64
 import sqlalchemy
 import sqlalchemy.types
 import sqlalchemy.orm.exc
@@ -15,6 +16,9 @@ def get_user(userident):
     details about the user in cookies or other transports that may
     be transmitted unencrypted.
     """
+
+    if not isinstance(userident, bytes):
+        userident = base64.b64decode(userident)
 
     try:
         return (db.Session
@@ -38,7 +42,7 @@ def get_user_byname(username):
         return None
 
 
-def init_auth_models(settings):
+def init(settings):
     """
     """
 
@@ -90,6 +94,9 @@ def init_auth_models(settings):
         id = sqlalchemy.Column(sqlalchemy.types.Integer, primary_key=True)
         _name = sqlalchemy.Column('name', sqlalchemy.types.String(length=64),
                                     unique=True, index=True)
+        _display_name = sqlalchemy.Column('display_name',
+                                    sqlalchemy.types.String(length=64),
+                                    nullable=True)
         email = sqlalchemy.Column(sqlalchemy.types.String(length=64),
                                     unique=True, index=True)
         ident = sqlalchemy.Column(sqlalchemy.types.LargeBinary(length=32),
@@ -123,7 +130,7 @@ def init_auth_models(settings):
                 args += (self.pass_salt, self.passhash)
             self.ident = self._gen_hash(*args, alg=hashlib.sha256)
 
-        @property
+        @sqlalchemy.ext.hybrid.hybrid_property
         def name(self):
             return self._name
 
@@ -131,6 +138,26 @@ def init_auth_models(settings):
         def name(self, name):
             self._name = name
             self.set_ident()
+
+        @name.expression
+        def name(cls):
+            return cls._name
+
+        @sqlalchemy.ext.hybrid.hybrid_property
+        def display_name(self):
+            return self._display_name or self.name.title()
+
+        @display_name.setter
+        def display_name(self, display_name):
+            self._display_name = display_name
+
+        @display_name.expression
+        def display_name(cls):
+            return cls._display_name
+
+        @property
+        def ident_b64(self):
+            return base64.b64encode(self.ident).decode()
 
         @property
         def password(self):
@@ -158,8 +185,11 @@ def init_auth_models(settings):
                     .label('level'))
 
         def __json__(self, request):
+            # TODO Update this with permission checks for different
+            #   data returns.
             return {
                 'id': self.id,
                 'name': self.name,
+                'display_name': self.display_name,
                 'email': self.email
             }

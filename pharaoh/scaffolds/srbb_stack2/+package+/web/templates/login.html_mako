@@ -1,4 +1,4 @@
-<%inherit file="base.html.mako" />
+<%inherit file="base.html_mako" />
 <div style="height: 200px;"></div>
 <div style="width: 300px" class="container">
     %if failed:
