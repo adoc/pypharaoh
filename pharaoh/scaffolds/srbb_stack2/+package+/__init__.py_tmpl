@@ -16,9 +16,15 @@ import pyramid.path
 
 import pharaoh.auth
 
+import {{project}}.validators.auth
+import {{project}}.models.auth
+
 from {{project}} import db
 from {{project}} import models
 from {{project}} import auth
+from {{project}} import validators
+
+
 
 
 from pprint import pprint
@@ -29,16 +35,6 @@ def js_view(request):
     """
     request.response.content_type = "application/javascript"
     return {}
-
-
-def logout_view(request):
-    """Logout view removes the cookie and redirects to the
-    "after_logout" route.
-    """
-
-    return pyramid.httpexceptions.HTTPFound(
-                            location=request.route_url('home'),
-                            headers=pyramid.security.forget(request))
 
 
 def init_settings(settings):
@@ -62,6 +58,9 @@ def init_settings(settings):
                             settings.get('database.initialize.drop_all', False))
     settings['auth.enable'] = pyramid.settings.asbool(
                                             settings.get('auth.enable', False))
+
+    settings['auth.allow_email_login'] = pyramid.settings.asbool(
+                                settings.get('auth.allow_email_login', False))
 
     # settings['auth.uri.login'] = settings.get('auth.uri.login', '/login')
     # settings['auth.uri.logout'] = settings.get('auth.uri.logout', '/logout')
@@ -89,12 +88,17 @@ def init_settings(settings):
 
     settings['auth.initialize.users'] = list(parse_users())
 
-    settings['auth.get_user_func'] = resolver.resolve(
-                settings.get('auth.get_user_func', '.models.auth:get_user'))
+    settings['auth.functions.get_user'] = resolver.resolve(
+                settings.get('auth.functions.get_user',
+                                '.models.auth:get_user'))
 
-    settings['auth.get_user_byname_func'] = resolver.resolve(
-                settings.get('auth.get_user_byname_func',
+    settings['auth.functions.get_user_byname'] = resolver.resolve(
+                settings.get('auth.functions.get_user_byname',
                                 '.models.auth:get_user_byname'))
+
+    settings['auth.functions.get_user_byemail'] = resolver.resolve(
+                settings.get('auth.functions.get_user_byemail',
+                                '.models.auth:get_user_byemail'))
 
     settings['authn.models.enable'] = pyramid.settings.asbool(
                                     settings.get('authn.models.enable', False))
@@ -128,13 +132,17 @@ def init_settings(settings):
             else:
                 principal = ':'.join(['g', principal])
 
-            def parse_permissions():
-                for permission in permissions.split(','):
-                    if permission == 'all':
-                        permission = pyramid.security.ALL_PERMISSIONS
-                    yield permission
+            if permissions == 'all':
+                permissions = pyramid.security.ALL_PERMISSIONS
+            else:
+                def parse_permissions():
+                    for permission in permissions.split(','):
+                        if permission == 'all':
+                            permission = pyramid.security.ALL_PERMISSIONS
+                        yield permission
 
-            permissions = tuple(parse_permissions())
+                permissions = tuple(parse_permissions())
+
 
             yield (action, principal, permissions)
 
@@ -208,21 +216,19 @@ def init_config(global_config, local_config):
             log.warn("""auth.uri.* key(s) were specified in config """
                     """but no auth views for package "%s" were found.""" % 
                                                                 caller.__name__)
-            auth_views = resolver.resolve('.views')
-            auth_views.logout_view = logout_view
+            auth_views = resolver.resolve('{{project}}.views.auth')
 
         do_scan_auth = False
 
         if 'auth.uri.login' in settings:
             assert hasattr(auth_views, 'login_view')
             config.add_route('auth.login', settings['auth.uri.login'])
-            # print(dir(auth_views.login_view))
             if hasattr(auth_views.login_view, '__venusian_callbacks__'):
                 do_scan_auth = True
             else:
                 config.add_view(auth_views.login_view,
                                     route_name='auth.login',
-                                    renderer=auth_views.login_view.renderer)
+                                    renderer=settings['auth.renderer.login'])
 
         if 'auth.uri.logout' in settings:
             assert hasattr(auth_views, 'logout_view')
@@ -238,13 +244,18 @@ def init_config(global_config, local_config):
             config.scan(auth_views)
 
         if 'auth.uri.after_logout' in settings:
-            config.add_route('auth.uri.after_logout',
-                                            settings['auth.uri.after_logout'])
+            config.add_route('auth.after_logout',
+                                            settings['auth.uri.after_logout'],
+                                            static=True)
+
+        config.add_forbidden_view(auth_views.unauthorized_view)
 
 
     if settings['auth.enable'] is True:
         print("    Auth Policies...")
         auth.init_auth(config, settings)
+        validators.init(config, settings)
+        validators.auth.init(config, settings)
 
         config.set_authentication_policy(
                         pharaoh.auth.auth_tkt_from_config(settings,
@@ -312,6 +323,9 @@ def init_config(global_config, local_config):
                             renderer=settings['base_js.template.config'],
                             http_cache=settings['base_js.cache_max_age'],
                             permission=settings['base_js.permission'])
+
+
+    
 
     return config, settings
 

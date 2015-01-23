@@ -1,4 +1,4 @@
-<a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-user"></i><span id="nav_dropdown_this_user" class="glyphicon glyphicon-repeat glyphicon-animate"></span><b class="caret"></b></a>
+<a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-user"></i><span id="user_dropdown_name">&nbsp;<%- infoModel.get("this_user")['display_name'] %>&nbsp;</span><b class="caret"></b></a>
 <ul class="dropdown-menu">
     <% 
     if (enable_profile) { %>

@@ -17,10 +17,8 @@ from pprint import pprint
 def api_admin_info(request):
     """
     """
-
-    return {'tag': 'info',
-            'status': 'ok',
-            'data': {'this_user': request.this_user}}
+    # print(request.registry.settings['authz.root_factory.permissions'])
+    return {'this_user': request.this_user}
 
 
 @pyramid.view.view_config(route_name="api.users", renderer="json",

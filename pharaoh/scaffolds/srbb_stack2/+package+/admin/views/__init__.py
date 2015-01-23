@@ -12,6 +12,13 @@ def home(request):
     return {}
 
 
+@pyramid.view.view_config(route_name="users", renderer="users.html_mako",
+                            permission="admin")
+def users(request):
+    """
+    """
+    return {}
+
     # return {'a': pyramid.security.remember(request, '12345')}
     # return {'static_path': request.static_map_path('static', ''),
     #         'title': request.site_meta_title, 'footer': request.site_meta_footer}

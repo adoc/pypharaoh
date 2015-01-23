@@ -4,21 +4,21 @@
 */
 
 require.config({
-    baseUrl: "${request.static_map_path('static', 'js')}",
+    baseUrl: "${request.static_map_path('assets', 'js')}",
     paths: {
         config: "${request.route_path('config.js').rstrip('.js')}",
-        jquery: 'jquery.min',
-        jquery_ui: 'jquery-ui.min',
-        underscore: 'underscore.min',
-        backbone: 'backbone.min',
-        bootstrap: 'bootstrap.min',
-        text: 'text.min',
-        raphael: "${request.static_map_path('assets', 'js/raphael.min.js').rstrip('.js')}",
-        morris: "${request.static_map_path('assets', 'js/morris.min.js').rstrip('.js')}",
-        flot: "${request.static_map_path('assets', 'js/jquery.flot.js').rstrip('.js')}",
-        flot_tooltip: "${request.static_map_path('assets', 'js/jquery.flot.tooltip.min.js').rstrip('.js')}",
-        flot_resize: "${request.static_map_path('assets', 'js/jquery.flot.resize.js').rstrip('.js')}",
-        flot_pie: "${request.static_map_path('assets', 'js/jquery.flot.pie.js').rstrip('.js')}"
+        jquery: "${request.static_map_path('static', 'js/jquery.min')}",
+        jquery_ui: "${request.static_map_path('static', 'js/jquery-ui.min')}",
+        underscore: "${request.static_map_path('static', 'js/underscore.min')}",
+        backbone: "${request.static_map_path('static', 'js/backbone.min')}",
+        bootstrap: "${request.static_map_path('static', 'js/bootstrap.min')}",
+        text: "${request.static_map_path('static', 'js/text.min')}",
+        raphael: "lib/raphael.min",
+        morris: "lib/morris.min",
+        flot: "lib/jquery.flot",
+        flot_tooltip: "lib/jquery.flot.tooltip.min",
+        flot_resize: "lib/jquery.flot.resize",
+        flot_pie: "lib/jquery.flot.pie"
     },
     shim: {
         bootstrap: {
@@ -41,3 +41,56 @@ require.config({
         }
     }
 });
+
+## TODO: Abstract this using the config module and a new "utils" module.
+window.text_url = function (path) {
+    var base = "${request.static_map_path('assets', 'tmpl')}";
+    return "text!" + path_join(base, path);
+}
+
+window.assert = function (condition, message) {
+    if (!condition) {
+        throw message || "AssertionError";
+    }
+}
+
+// src: http://stackoverflow.com/a/646643
+// Add `startsWith` and `endsWith` to the String prototype.
+if (typeof String.prototype.startsWith != 'function') {
+    String.prototype.startsWith = function (str){
+        return this.slice(0, str.length) == str;
+    };
+}
+
+if (typeof String.prototype.endsWith != 'function') {
+    String.prototype.endsWith = function (str){
+        return this.slice(-str.length) == str;
+    };
+}
+
+// src: http://stackoverflow.com/a/1418059
+// Add a whitespace strip to the String prototype.
+if(typeof(String.prototype.trim) === "undefined") {
+    String.prototype.trim = function() 
+    {
+        return String(this).replace(/^\s+|\s+$/g, '');
+    };
+}
+
+function path_join(a) {
+    /* Direct port of Python std posixpath.join.
+    src: https://hg.python.org/cpython/file/v2.7.3/Lib/posixpath.py:60
+    */
+    var path = a;
+    for(var i=1; i<arguments.length; i++) {
+        var b = arguments[i];
+        if(b.startsWith('/')) {
+            path = b;
+        } else if (path == '' || path.endsWith('/')) {
+            path = path.concat(b);
+        } else {
+            path = path.concat('/' + b);
+        }
+    }
+    return path;
+}

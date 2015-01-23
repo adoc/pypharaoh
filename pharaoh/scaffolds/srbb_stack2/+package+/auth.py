@@ -9,20 +9,26 @@ def init_auth(config, settings):
     """
 
     global get_user
+    global get_user_byname
+    global get_user_byemail
     global get_groups_callback
     global get_groups
     global get_this_user
     global has_permission_bool
 
     # Retreive the `get_user` function as specified in the ini.
-    _get_user = settings['auth.get_user_func']
-    _get_user_byname = settings['auth.get_user_byname_func']
+    _get_user = settings['auth.functions.get_user']
+    _get_user_byname = settings['auth.functions.get_user_byname']
+    _get_user_byemail = settings['auth.functions.get_user_byemail']
 
     def get_user(request, userid):
         return _get_user(userid)
 
     def get_user_byname(request, username):
         return _get_user_byname(username)
+
+    def get_user_byemail(request, email):
+        return _get_user_byemail(email)
 
     def get_groups_callback(userid, request):
         """Get a list of groups the user belongs to.
@@ -55,6 +61,7 @@ def init_auth(config, settings):
 
     config.add_request_method(get_user, property=False, reify=False)
     config.add_request_method(get_user_byname, property=False, reify=False)
+    config.add_request_method(get_user_byemail, property=False, reify=False)
     config.add_request_method(get_groups, property=False, reify=False)
     config.add_request_method(get_this_user, name='this_user', property=True,
                                 reify=False)

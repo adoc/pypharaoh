@@ -30,7 +30,7 @@ def get_user(userident):
 
 
 def get_user_byname(username):
-    """
+    """Query for a user by their user name.
     """
 
     try:
@@ -40,6 +40,20 @@ def get_user_byname(username):
                     .one())
     except sqlalchemy.orm.exc.NoResultFound:
         return None
+
+
+def get_user_byemail(email):
+    """Query for a user by their email address.
+    """
+
+    if email:
+        try:
+            return (db.Session
+                        .query(User)
+                        .filter(User.email==email)
+                        .one())
+        except sqlalchemy.orm.exc.NoResultFound:
+            return None
 
 
 def init(settings):
@@ -97,7 +111,7 @@ def init(settings):
         _display_name = sqlalchemy.Column('display_name',
                                     sqlalchemy.types.String(length=64),
                                     nullable=True)
-        email = sqlalchemy.Column(sqlalchemy.types.String(length=64),
+        email = sqlalchemy.Column(sqlalchemy.types.String(length=128),
                                     unique=True, index=True)
         ident = sqlalchemy.Column(sqlalchemy.types.LargeBinary(length=32),
                                     unique=True, index=True)

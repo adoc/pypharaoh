@@ -9,7 +9,7 @@
 [composite:main] 
 use = call:{{project}}:boot_factory
 / = web 
-# s/api/v1 = api
+# /api/v1 = api
 /admin = admin 
 
 
@@ -62,8 +62,9 @@ auth.enable = true
 #   (or other identifier) and returns a User object or None.
 #   If "authn.models" is disabled, replace this with a function that
 #   will return a valid User object.
-auth.get_user_func = {{project}}.models.auth:get_user
-auth.get_user_byname_func = {{project}}.models.auth:get_user_byname
+auth.functions.get_user = {{project}}.models.auth:get_user
+auth.functions.get_user_byname = {{project}}.models.auth:get_user_byname
+auth.functions.get_user_byemail = {{project}}.models.auth:get_user_byemail
 
 # TODO: Put in to "authn.models" namespace.
 # Initialize database with the following values.
@@ -219,10 +220,16 @@ static.mapping =
     assets|{{project}}.admin:assets/|0
 static.serve = true
 
+auth.allow_email_login = true
+
+auth.renderer.login = login.html_mako
+
+auth.uri.login = /login
 auth.uri.logout = /logout
+auth.uri.after_logout = /
 
 authz.root_factory.permissions =
-    allow:root:all
+    allow:roots:all
     allow:admins:admin,edit,view,public
     allow:users:view,public
     allow:all:public
@@ -258,8 +265,13 @@ mako.imports =
     import json
     import datetime
 
+auth.allow_email_login = true
+
+auth.renderer.login = login.html_mako
+
 auth.uri.login = /login
 auth.uri.logout = /logout
+auth.uri.after_logout = /
 
 beaker.session.type = memory
 beaker.session.secret = {{beaker_session_secret}}

@@ -1,0 +1,67 @@
+"""
+"""
+
+"""Web Application Authentication Views.
+"""
+
+
+import pyramid.view
+import pyramid.security
+
+from {{project}} import auth
+from {{project}} import validators
+
+
+def unauthorized_view(request):
+    """Return HTTPUnauthorized when user is logged in but unauthorized,
+    redirect to 'login' route if no user is logged in.
+    """
+    # show the user an Unauthorized if they are already logged in.
+    if pyramid.security.authenticated_userid(request):
+        return pyramid.httpexceptions.HTTPUnauthorized()
+
+    return pyramid.httpexceptions.HTTPFound(location=
+                request.route_url('auth.login', _query=(('next', request.path),)))
+
+
+#@pyramid.view.view_config(route_name='auth.login',
+#                            renderer='login.html_mako')
+def login_view(request):
+    if 'login' in request.params and 'password' in request.params:
+        login_params = validators.auth.LoginSchema().to_python(request.params)
+
+        # TODO: Determine if we need to validate the "next" param.
+        next = request.params.get('next') or request.route_url('home')
+        
+        login = login_params['login']   # User name or email.
+        password = login_params['password']
+
+        user = request.get_user_byname(login)
+
+        if (not user and
+                request.registry.settings['auth.allow_email_login'] is True):
+            user = request.get_user_byemail(login)
+
+        if user and password and user.check_password(password):
+            headers = pyramid.security.remember(request, user.ident_b64)
+            return pyramid.httpexceptions.HTTPFound(location=next,
+                                                    headers=headers)
+        else:
+            return {'failed': True}
+    return {}
+
+
+#@pyramid.view.view_config(route_name='auth.logout')
+def logout_view(request):
+    """Logout view removes the cookie and redirects to the
+    "after_logout" route.
+    """
+
+    try:
+        location = request.route_url('auth.after_logout')
+    except KeyError:
+        location = request.route_url('home')
+
+    return pyramid.httpexceptions.HTTPFound(
+                            location=location,
+                            headers=pyramid.security.forget(request))
