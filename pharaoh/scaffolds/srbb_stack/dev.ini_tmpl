@@ -1,18 +1,31 @@
 ###
+# SRBB Stack Scaffolding
+#   author: https://github.com/adoc
+#
 # {{project}} Application Development Configuration
-# SRBB Stack
 ###
 
 
 [composite:main] 
-use = call:core:core_factory
+use = call:{{project}}:boot_factory
 / = web 
-/api/v1 = api
+# /api/v1 = api
 /admin = admin 
 
 
-[filter:proxy_handle]
-# Use `prefix` to parse web server reverse proxy environment data.
+# Use ``paste.deploy.prefix`` to parse web server reverse proxy
+#   environment data. "prefix" must match the prefix used in the
+#   "composite" section.
+[filter:proxy_handle_web]
+prefix = /
+use = egg:PasteDeploy#prefix
+
+[filter:proxy_handle_admin]
+prefix = /admin
+use = egg:PasteDeploy#prefix
+
+[filter:proxy_handle_api]
+prefix = /api
 use = egg:PasteDeploy#prefix
 
 
@@ -49,7 +62,9 @@ auth.enable = true
 #   (or other identifier) and returns a User object or None.
 #   If "authn.models" is disabled, replace this with a function that
 #   will return a valid User object.
-auth.get_user_func = core.models.auth:get_user
+auth.functions.get_user = {{project}}.models.auth:get_user
+auth.functions.get_user_byname = {{project}}.models.auth:get_user_byname
+auth.functions.get_user_byemail = {{project}}.models.auth:get_user_byemail
 
 # TODO: Put in to "authn.models" namespace.
 # Initialize database with the following values.
@@ -74,7 +89,8 @@ authn.models.user_group.tablename = users_groups
 # Set an identity secret. (Note: If this is changed, it will revoke
 #   authentication for all users. You will have to execute
 #   User.set_ident() on all users to recover.)
-authn.models.identity.secret = {{auth_identity_secret}}
+authn.models.identity.secret = 12345
+    #{{auth_identity_secret}}
 # This setting will enable the use of the password for identity as well
 #   as the username. (If either a username or password changes,
 #   authentication for that user is revoked. Note: If this is changed,
@@ -85,12 +101,6 @@ authn.models.identity.use_password = true
 # Enable authorization models.
 authz.models.enable = true
 authz.models.permissions.tablename = permissions
-
-authz.root_factory.permissions =
-    allow:root:all
-    allow:admins:admin,edit,view,public
-    allow:users:view,public
-    allow:all:public,admin
 
 
 ###
@@ -119,7 +129,8 @@ sqlalchemy.url = sqlite:///%(here)s/{{project}}.sqlite
 # The secret used for auth_tkt cookie signing. This value
 #   should be unique across all values provided to Pyramid for various
 #   subsystem secrets.
-auth_tkt.secret = {{dev_auth_tkt_secret}}
+auth_tkt.secret = 12345
+    # {{dev_auth_tkt_secret}}
 
 # The cookie name used.
 # auth_tkt.cookie_name = auth_{{project}}
@@ -170,8 +181,8 @@ auth_tkt.hashalg = sha512
 
 
 [app:api]
-use = call:api:main
-filter-with = proxy_handle
+use = call:{{project}}.api:main
+filter-with = proxy_handle_api
 
 pyramid.default_locale_name = en
 pyramid.debug_authorization = false
@@ -182,13 +193,10 @@ pyramid.includes =
     pyramid_debugtoolbar
     pyramid_tm
 
-auth.uri.login = /login
-auth.uri.logout = /logout
-
 
 [app:admin]
-use = call:admin:main
-filter-with = proxy_handle
+use = call:{{project}}.admin:main
+filter-with = proxy_handle_admin
 
 pyramid.default_locale_name = en
 pyramid.reload_templates = true
@@ -201,14 +209,43 @@ pyramid.includes =
     pyramid_tm
     pyramid_mako
 
+mako.directories = {{project}}.admin:templates
+
 mako.imports = 
     import json
     import datetime
 
+static.mapping =
+    static|{{project}}:static/|0
+    assets|{{project}}.admin:assets/|0
+static.serve = true
+
+auth.allow_email_login = true
+
+auth.renderer.login = login.html_mako
+
+auth.uri.login = /login
+auth.uri.logout = /logout
+auth.uri.after_logout = /
+
+authz.root_factory.permissions =
+    allow:roots:all
+    allow:admins:admin,edit,view,public
+    allow:users:view,public
+    allow:all:public
+
+# Enable common.js and config.js.
+base_js.enable = true
+base_js.prefix = /
+base_js.minify = false
+base_js.cache_max_age = 0
+base_js.permission = admin
+base_js.template.common =
+base_js.template.config =
 
 [app:web]
-use = egg:{{project}}
-filter-with = proxy_handle
+use = call:{{project}}.web:main
+filter-with = proxy_handle_web
 
 pyramid.default_locale_name = en
 pyramid.reload_templates = true
@@ -222,9 +259,19 @@ pyramid.includes =
     pyramid_mako
     pyramid_beaker
 
+mako.directories = {{project}}.web:templates
+
 mako.imports = 
     import json
     import datetime
+
+auth.allow_email_login = true
+
+auth.renderer.login = login.html_mako
+
+auth.uri.login = /login
+auth.uri.logout = /logout
+auth.uri.after_logout = /
 
 beaker.session.type = memory
 beaker.session.secret = {{beaker_session_secret}}
@@ -233,11 +280,27 @@ beaker.session.key = {{project}}_session
 # uri|directory|cache_max_age
 static.mapping =
     static|{{project}}:static/|0
+    assets|{{project}}.web:assets/|0
 static.serve = true
+
+authz.root_factory.permissions =
+    allow:root:all
+    allow:admins:admin,edit,view,public
+    allow:users:view,public
+    allow:all:public
+
+# Enable common.js and config.js.
+base_js.enable = true
+base_js.prefix = /
+base_js.minify = false
+base_js.cache_max_age = 0
+base_js.permission = public
+base_js.template.common =
+base_js.template.config =
+
 
 
 #######
-
 
 
 # By default, the toolbar only appears for clients from IP addresses
@@ -275,7 +338,7 @@ handlers =
 qualname = {{package}}
 
 [logger_sqlalchemy]
-level = INFO
+level = WARN
 handlers =
 qualname = sqlalchemy.engine
 # "level = INFO" logs SQL queries.
