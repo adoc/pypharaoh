@@ -18,6 +18,7 @@ def main(global_config, **local_config):
 
     config.add_route('api.info', '/api/info')
     config.add_route('api.users', '/api/users')
+    config.add_route('api.groups', '/api/groups')
 
     config.scan('{{project}}.admin.views',
                     ignore='{{project}}.admin.views.auth')

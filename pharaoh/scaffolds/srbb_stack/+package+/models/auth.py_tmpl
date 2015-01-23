@@ -1,6 +1,7 @@
 import os
 import functools
 import hashlib
+import binascii
 import base64
 import sqlalchemy
 import sqlalchemy.types
@@ -101,6 +102,13 @@ def init(settings):
         def __eq__(self, other):
             return self._level == other._level
 
+        def __json__(self, request):
+            return {
+                'id': self.id,
+                'name': self.name,
+                'level': self.level
+            }
+
 
     class User(models.Base):
         __tablename__ = user_tablename
@@ -171,7 +179,11 @@ def init(settings):
 
         @property
         def ident_b64(self):
-            return base64.b64encode(self.ident).decode()
+            return base64.urlsafe_b64encode(self.ident).decode()
+
+        @property
+        def ident_hex(self):
+            return binascii.hexlify(self.ident).decode()
 
         @property
         def password(self):
@@ -202,8 +214,9 @@ def init(settings):
             # TODO Update this with permission checks for different
             #   data returns.
             return {
-                'id': self.id,
                 'name': self.name,
                 'display_name': self.display_name,
-                'email': self.email
+                'email': self.email,
+                'level': self.level,
+                'groups': self.groups
             }

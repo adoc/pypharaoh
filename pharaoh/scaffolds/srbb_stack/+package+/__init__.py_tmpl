@@ -25,8 +25,6 @@ from {{project}} import auth
 from {{project}} import validators
 
 
-
-
 from pprint import pprint
 
 
@@ -35,6 +33,13 @@ def js_view(request):
     """
     request.response.content_type = "application/javascript"
     return {}
+
+
+def robots_view(request):
+    """Return the robots.txt specified in the settings.
+    """
+
+    return request.registry.settings['robots.txt']
 
 
 def init_settings(settings):
@@ -178,6 +183,11 @@ def init_settings(settings):
 
     settings['base_js.template.config'] = (settings.get(
                                 'base_js.template.config') or 'config.js_mako')
+
+    if 'robots.txt' in settings:
+        settings['robots.txt'] = settings.get('robots.txt','').strip()
+        settings['robots.cache_max_age'] = int(settings.get(
+                                            'robots.cache_max_age') or 0)
 
 
 def init_config(global_config, local_config):
@@ -325,7 +335,12 @@ def init_config(global_config, local_config):
                             permission=settings['base_js.permission'])
 
 
-    
+    # Set up robots.txt
+    if 'robots.txt' in settings:
+        config.add_route('robots.txt', '/robots.txt')
+        config.add_view(robots_view, route_name='robots.txt', renderer='string',
+                        http_cache=settings['robots.cache_max_age'])
+
 
     return config, settings
 

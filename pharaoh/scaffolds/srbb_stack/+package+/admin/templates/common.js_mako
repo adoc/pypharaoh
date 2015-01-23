@@ -13,12 +13,12 @@ require.config({
         backbone: "${request.static_map_path('static', 'js/backbone.min')}",
         bootstrap: "${request.static_map_path('static', 'js/bootstrap.min')}",
         text: "${request.static_map_path('static', 'js/text.min')}",
-        raphael: "lib/raphael.min",
-        morris: "lib/morris.min",
-        flot: "lib/jquery.flot",
-        flot_tooltip: "lib/jquery.flot.tooltip.min",
-        flot_resize: "lib/jquery.flot.resize",
-        flot_pie: "lib/jquery.flot.pie"
+        raphael: "${request.static_map_path('static', 'js/raphael.min')}",
+        morris: "${request.static_map_path('static', 'js/morris.min')}",
+        flot: "${request.static_map_path('static', 'js/jquery.flot')}",
+        flot_tooltip: "${request.static_map_path('static', 'js/jquery.flot.tooltip.min')}",
+        flot_resize: "${request.static_map_path('static', 'js/jquery.flot.resize')}",
+        flot_pie: "${request.static_map_path('static', 'js/jquery.flot.pie')}"
     },
     shim: {
         bootstrap: {

@@ -14,7 +14,7 @@ from pprint import pprint
 
 @pyramid.view.view_config(route_name="api.info", renderer="json",
                             permission="admin")
-def api_admin_info(request):
+def info(request):
     """
     """
     # print(request.registry.settings['authz.root_factory.permissions'])
@@ -23,7 +23,7 @@ def api_admin_info(request):
 
 @pyramid.view.view_config(route_name="api.users", renderer="json",
                             permission="admin")
-def api_admin_users(request):
+def users(request):
     """
     """
     this_user = request.this_user
@@ -31,4 +31,17 @@ def api_admin_users(request):
     return (db.Session
                 .query(models.auth.User)
                 .filter(this_user.level >= models.auth.User.level)
+                .all())
+
+
+@pyramid.view.view_config(route_name="api.groups", renderer="json",
+                            permission="admin")
+def groups(request):
+    """
+    """
+    this_user = request.this_user
+
+    return (db.Session
+                .query(models.auth.Group)
+                .filter(this_user.level >= models.auth.Group.level)
                 .all())
