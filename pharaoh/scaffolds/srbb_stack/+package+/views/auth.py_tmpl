@@ -21,16 +21,21 @@ def unauthorized_view(request):
         return pyramid.httpexceptions.HTTPUnauthorized()
 
     return pyramid.httpexceptions.HTTPFound(location=
-                request.route_url('auth.login', _query=(('next', request.path),)))
+                request.route_url('auth.login',
+                                    _query=(('next', request.path),)))
 
 
-#@pyramid.view.view_config(route_name='auth.login',
-#                            renderer='login.html_mako')
+def unauthorized_view_api(request):
+    """Return HTTPUnauthorized when unauthorized API request is
+    made."""
+    return pyramid.httpexceptions.HTTPUnauthorized()
+
+
 def login_view(request):
     if 'login' in request.params and 'password' in request.params:
         login_params = validators.auth.LoginSchema().to_python(request.params)
 
-        # TODO: Determine if we need to validate the "next" param.
+        # TODO: Determine if we should validate the "next" param.
         next = request.params.get('next') or request.route_url('home')
         
         login = login_params['login']   # User name or email.
@@ -51,7 +56,6 @@ def login_view(request):
     return {}
 
 
-#@pyramid.view.view_config(route_name='auth.logout')
 def logout_view(request):
     """Logout view removes the cookie and redirects to the
     "after_logout" route.

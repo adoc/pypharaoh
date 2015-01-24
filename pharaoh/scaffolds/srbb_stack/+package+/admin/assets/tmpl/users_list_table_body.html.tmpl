@@ -1,0 +1,12 @@
+<% usersModel.forEach(function(user) {
+    var groups = _.map(user.get("groups"),
+                        function (group) { return group['name']}); %>
+    <tr data-id="<%- user.get("id") %>">
+        <td><%- user.get("name") %></td>
+        <td><%- user.get("display_name") %></td>
+        <td><%- user.get("email") %></td>
+        <td><%- user.get("level") %></td>
+        <td><%- groups.join(", ") %></td>
+        <td class="tools"><i class="fa fa-edit"></i>&nbsp;<i class="fa fa-trash-o"></i></td>
+    </tr>
+<% }); %>

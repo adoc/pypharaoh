@@ -5,6 +5,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import os
+import copy
 import functools
 import urllib.parse
 import rutter.urlmap
@@ -28,8 +29,35 @@ from {{project}} import validators
 from pprint import pprint
 
 
+def init_factories(config, settings):
+    """
+    """
+
+    class RootFactory:
+        """RootFactory used for all composite apps. ACL's are
+        defined and parsedset from the config INI.
+        """
+
+        __acl__ = settings['authz.root_factory.permissions']
+
+        def __init__(self, request):
+            self.request = request
+
+    class ApiFactory(RootFactory):
+        """ApiFactory applied to all API calls. This is used for containing
+        API views so the forbidden view returns an Authorized HTTP error
+        rather than a redirect to login.
+        """
+
+        pass
+
+    config.set_root_factory(RootFactory)
+
+    return RootFactory, ApiFactory
+
+
 def js_view(request):
-    """Reusable Javascript view.
+    """Reusable Javascript view callable.
     """
     request.response.content_type = "application/javascript"
     return {}
@@ -67,12 +95,6 @@ def init_settings(settings):
     settings['auth.allow_email_login'] = pyramid.settings.asbool(
                                 settings.get('auth.allow_email_login', False))
 
-    # settings['auth.uri.login'] = settings.get('auth.uri.login', '/login')
-    # settings['auth.uri.logout'] = settings.get('auth.uri.logout', '/logout')
-    # settings['auth.uri.after_logout'] = settings.get('auth.uri.after_logout',
-    #                                                    '/')
-
-    # aslist parse (group:level)
     def parse_groups():
         for init_group in pyramid.settings.aslist(
                                     settings.get('auth.initialize.groups', [])):
@@ -143,7 +165,8 @@ def init_settings(settings):
                 def parse_permissions():
                     for permission in permissions.split(','):
                         if permission == 'all':
-                            permission = pyramid.security.ALL_PERMISSIONS
+                            raise ValueError("All permissions may not be"
+                                            "specified with other permissions.")
                         yield permission
 
                 permissions = tuple(parse_permissions())
@@ -191,8 +214,11 @@ def init_settings(settings):
 
 
 def init_config(global_config, local_config):
+    """Initialize each application's configuration.
+    """
+
     # Handle the settings/config
-    settings = global_config
+    settings = copy.deepcopy(global_config)
     settings.update(local_config)
     init_settings(settings)
 
@@ -217,7 +243,23 @@ def init_config(global_config, local_config):
                                             name=key.replace('.', '_'),
                                             property=True, reify=True)
 
-    # TODO: Configure these in the subapp seems a better factor.
+    if settings['auth.enable'] is True:
+        print("    Auth Policies...")
+        auth.init_auth(config, settings)
+        validators.init(config, settings)
+        validators.auth.init(config, settings)
+
+        config.set_authentication_policy(
+                        pharaoh.auth.auth_tkt_from_config(settings,
+                                    callback=auth.get_groups_callback))
+
+        config.set_authorization_policy(
+                            pyramid.authorization.ACLAuthorizationPolicy())
+
+        RootFactory, ApiFactory = init_factories(config, settings)
+        config.add_settings(RootFactory=RootFactory,
+                            ApiFactory=ApiFactory)
+
     if any(key in settings for key in ['auth.uri.login', 'auth.uri.logout']):
         try:
             auth_views = resolver.resolve('.views.auth')
@@ -259,41 +301,8 @@ def init_config(global_config, local_config):
                                             static=True)
 
         config.add_forbidden_view(auth_views.unauthorized_view)
-
-
-    if settings['auth.enable'] is True:
-        print("    Auth Policies...")
-        auth.init_auth(config, settings)
-        validators.init(config, settings)
-        validators.auth.init(config, settings)
-
-        config.set_authentication_policy(
-                        pharaoh.auth.auth_tkt_from_config(settings,
-                                    callback=auth.get_groups_callback))
-
-        config.set_authorization_policy(
-                            pyramid.authorization.ACLAuthorizationPolicy())
-
-        class RootFactory:
-            """RootFactory used for all composite apps. ACL's are
-            defined and parsedset from the config INI.
-            """
-
-            __acl__ = settings['authz.root_factory.permissions']
-
-            def __init__(self, request):
-                self.request = request
-
-        config.set_root_factory(RootFactory)
-
-    # if 'authentication_policy' in settings:
-    #    config.set_authentication_policy(settings['authentication_policy'])
-
-    # if 'authorization_policy' in settings:
-    #     config.set_authorization_policy(settings['authorization_policy'])
-
-    #if 'root_factory' in settings:
-    #    config.set_root_factory(settings['root_factory'])
+        config.add_forbidden_view(auth_views.unauthorized_view_api,
+                                    containment=ApiFactory)
 
     if 'static.mapping' in settings and settings['static.serve'] is True:
         static_map = settings['static.mapping']
@@ -334,13 +343,11 @@ def init_config(global_config, local_config):
                             http_cache=settings['base_js.cache_max_age'],
                             permission=settings['base_js.permission'])
 
-
     # Set up robots.txt
     if 'robots.txt' in settings:
         config.add_route('robots.txt', '/robots.txt')
         config.add_view(robots_view, route_name='robots.txt', renderer='string',
                         http_cache=settings['robots.cache_max_age'])
-
 
     return config, settings
 
@@ -363,24 +370,6 @@ def boot_factory(loader, global_config, **local_config):
             global_config['database.enable']]):
         print("    Auth Models...")
         models.auth.init(global_config)
-
-    # Does this need to be configured in the factory??
-    #   Might make more sense in init_config
-    '''
-    if global_config['auth.enable']:
-        print("    Auth Policies...")
-        auth.init_auth(global_config)
-
-        global_config['authentication_policy'] = (
-                                pharaoh.auth.auth_tkt_from_config(global_config,
-                                    callback=auth.get_groups_callback))
-
-        global_config['authorization_policy'] = (
-                                pyramid.authorization.ACLAuthorizationPolicy())
-
-        RootFactory.__acl__ = global_config['authz.root_factory.permissions']
-        global_config['root_factory'] = RootFactory
-    '''
 
     global_config['composite'] = local_config
 

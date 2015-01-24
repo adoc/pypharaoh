@@ -1,24 +1,23 @@
-"""
+"""Admin Panel Views.
 """
 
 import pyramid.view
 
+from pprint import pprint
 
 @pyramid.view.view_config(route_name="home", renderer="home.html_mako",
                             permission="admin")
 def home(request):
     """
     """
+    request.session['test'] = 'test'
+    pprint(request.session._session())
     return {}
 
 
-@pyramid.view.view_config(route_name="users", renderer="users.html_mako",
+@pyramid.view.view_config(route_name="security", renderer="security.html_mako",
                             permission="admin")
-def users(request):
+def security(request):
     """
     """
     return {}
-
-    # return {'a': pyramid.security.remember(request, '12345')}
-    # return {'static_path': request.static_map_path('static', ''),
-    #         'title': request.site_meta_title, 'footer': request.site_meta_footer}

@@ -1,24 +1,32 @@
 """Administration Panel Initialization.
 """
 
-import {{project}}
+from {{project}} import init_config
 
 
 def main(global_config, **local_config):
     """This function returns a Pyramid WSGI application.
     """
     
+    global RootFactory
+    global ApiFactory
+
     print("Initializing Platform Admin Dashboard...")
 
-    # Core module 
-    config, settings = {{project}}.init_config(global_config, local_config)
+    config, settings = init_config(global_config, local_config)
 
+    RootFactory = config.get_settings()['RootFactory']
+    ApiFactory = config.get_settings()['ApiFactory']
+
+    # Set up web routes.
     config.add_route('home', '/')
-    config.add_route('users', '/users')
+    config.add_route('security', '/security')
 
-    config.add_route('api.info', '/api/info')
-    config.add_route('api.users', '/api/users')
-    config.add_route('api.groups', '/api/groups')
+    # Contain API calls in to ApiFactory.
+    # TODO: try to use config.include and route_prefix to set these.
+    config.add_route('api.info', '/api/v1/info', factory=ApiFactory)
+    config.add_route('api.users', '/api/v1/users', factory=ApiFactory)
+    config.add_route('api.groups', '/api/v1/groups', factory=ApiFactory)
 
     config.scan('{{project}}.admin.views',
                     ignore='{{project}}.admin.views.auth')

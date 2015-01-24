@@ -1,0 +1,7 @@
+<% groupsModel.forEach(function(group) { %>
+    <tr>
+        <td><%- group.get("name") %></td>
+        <td><%- group.get("level") %></td>
+        <td class="tools"><i class="fa fa-edit"></i>&nbsp;<i class="fa fa-trash-o"></i></td>
+    </tr>
+<% }); %>

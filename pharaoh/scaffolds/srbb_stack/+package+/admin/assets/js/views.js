@@ -50,6 +50,31 @@ define(['underscore', 'jquery', 'backbone', 'config', 'models', 'templates'],
             }
         });
 
+        Views.usersList = BaseView.extend({
+            /* must run setElement on this object since it's expected
+            the output will be in different places.*/
+            // el: $("#users_table_body"),
+            initialize: function (options) {
+                this.usersModel = new Models.Users();
+                this.listenTo(this.usersModel, "add remove",
+                                    _.debounce(this.render));
+            },
+            render: function () {
+                this.$el.html(Templates.usersListTable(this));
+            }
+        });
+
+        Views.groupsList = BaseView.extend({
+            /* must run setElement */
+            initialize: function (options) {
+                this.groupsModel = new Models.Groups();
+                this.listenTo(this.groupsModel, "add remove",
+                                    _.debounce(this.render));
+            },
+            render: function () {
+                this.$el.html(Templates.groupsListTable(this));
+            }
+        });
 
         return Views;
     }

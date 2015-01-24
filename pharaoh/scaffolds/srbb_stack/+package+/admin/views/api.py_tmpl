@@ -34,6 +34,19 @@ def users(request):
                 .all())
 
 
+# User GET
+
+
+# User POST
+
+
+# User PUT
+
+
+# User Delete
+
+
+
 @pyramid.view.view_config(route_name="api.groups", renderer="json",
                             permission="admin")
 def groups(request):

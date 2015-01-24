@@ -3,20 +3,91 @@
 ##  Page Heading
     <div class="row">
         <div class="col-lg-12">
-            <h1 class="page-header">Users</h1>
+            <h1 class="page-header">Security</h1>
             <ol class="breadcrumb">
                 <li>
                     <i class="fa fa-dashboard"></i>&nbsp;<a href="${request.route_path('home')}">Dashboard</a>
                 </li>
                 <li class="active">
-                    <i class="fa fa-table"></i>&nbsp;Users
+                    <i class="fa fa-table"></i>&nbsp;Security
                 </li>
             </ol>
         </div>
     </div>
 ##  /Page Heading
 
-    
+    <style>
+        td {
+            width: 1px;
+        }
+        td.tools {
+            text-align: right;
+        }
+        a.anchor {
+            /* Account for fixed header when using anchor links in content. */
+            display: block;
+            position: relative;
+            top: -50px;
+        }
+    </style>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <a class="anchor" name="users"></a>
+            <h2>Users</h2>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Display Name</th>
+                            <th>Email</th>
+                            <th>Level</th>
+                            <th>Groups</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="users_table_body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+       
+    <div class="row">
+        <div class="col-lg-12">
+            <a class="anchor" name="groups"></a>
+            <h2>Groups</h2>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Level</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="groups_table_body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%def name="scripts()">
+    require(['views'], function (Views) {
+        var usersView = new Views.usersList();
+        usersView.setElement($("#users_table_body"));
+        usersView.usersModel.fetch();
+
+        var groupsView = new Views.groupsList();
+        groupsView.setElement($("#groups_table_body"));
+        groupsView.groupsModel.fetch();
+
+
+    });
+</%def>
+
+<%doc>
 
     <div class="row">
         <div class="col-lg-6">
@@ -330,3 +401,5 @@
     <!-- /.row -->
 
 </div>
+
+</%doc>

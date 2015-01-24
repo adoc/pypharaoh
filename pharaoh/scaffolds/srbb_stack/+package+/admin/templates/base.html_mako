@@ -55,8 +55,21 @@
                         <li class="${request.matched_route.name == 'home' and 'active' or ''}">
                             <a href="${request.route_path('home')}"><i class="fa fa-fw fa-dashboard"></i> Dashboard</a>
                         </li>
+                        <%doc>
                         <li class="${request.matched_route.name == 'users' and 'active' or ''}">
-                            <a href="${request.route_path('users')}"><i class="fa fa-fw fa-users"></i> Users</a>
+                            <a href="${request.route_path('users')}"><i class="fa fa-fw fa-users"></i> Users and Groups</a>
+                        </li>
+                        </%doc>
+                        <li class="${request.matched_route.name == 'security' and 'active' or ''}">
+                            <a href="javascript:;" data-toggle="collapse" data-target="#security_dropdown"><i class="fa fa-fw fa-puzzle-piece"></i>&nbsp;Security <i class="fa fa-fw fa-caret-down"></i></a>
+                            <ul id="security_dropdown" class="collapse">
+                                <li>
+                                    <a href="${request.route_path('security', _anchor='users')}"><i class="fa fa-fw fa-user"></i>&nbsp;Users</a>
+                                </li>
+                                <li>
+                                    <a href="${request.route_path('security', _anchor='groups')}"><i class="fa fa-fw fa-group"></i>&nbsp;Groups</a>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                 </div>
@@ -83,7 +96,7 @@
         </script>
     %if hasattr(next, "scripts"):
         <script type="text/javascript">
-            ${next.scripts()}
+            ${ next.scripts() }
         </script>
     %endif
     </body>

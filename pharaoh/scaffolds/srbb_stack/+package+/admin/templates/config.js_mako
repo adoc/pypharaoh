@@ -9,7 +9,9 @@ define([], function () {
     Config.uri = {
         logout: ${json.dumps(request.route_path('auth.logout'))|n},
         api: {
-            info: ${json.dumps(request.route_path('api.info'))|n}
+            info: ${json.dumps(request.route_path('api.info'))|n},
+            users: ${json.dumps(request.route_path('api.users'))|n},
+            groups: ${json.dumps(request.route_path('api.groups'))|n}
         }
     };
 

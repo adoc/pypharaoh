@@ -77,7 +77,7 @@ auth.initialize.groups =
 # username:password:group1[,group2,group3]
 auth.initialize.users =
     root:rootpass:roots
-    admin:adminpass:admins
+    admin:adminpass:roots,admins,users
     user:userpass:users
 
 # Enable authentication database models.
@@ -207,6 +207,7 @@ pyramid.includes =
     pyramid_debugtoolbar
     pyramid_tm
     pyramid_mako
+    pyramid_beaker
 
 mako.directories = {{project}}.admin:templates
 
@@ -232,6 +233,10 @@ authz.root_factory.permissions =
     allow:admins:admin,edit,view,public
     allow:users:view,public
     allow:all:public
+
+beaker.session.type = memory
+beaker.session.secret = {{beaker_session_secret}}
+beaker.session.key = {{project}}_session
 
 # Enable common.js and config.js.
 base_js.enable = true
@@ -281,6 +286,12 @@ auth.uri.login = /login
 auth.uri.logout = /logout
 auth.uri.after_logout = /
 
+authz.root_factory.permissions =
+#    allow:roots:all
+#    allow:admins:admin,edit,view,public
+#    allow:users:view,public
+#    allow:all:public
+
 beaker.session.type = memory
 beaker.session.secret = {{beaker_session_secret}}
 beaker.session.key = {{project}}_session
@@ -290,12 +301,6 @@ static.mapping =
     static|{{project}}:static/|0
     assets|{{project}}.web:assets/|0
 static.serve = true
-
-authz.root_factory.permissions =
-    allow:root:all
-    allow:admins:admin,edit,view,public
-    allow:users:view,public
-    allow:all:public
 
 # Enable common.js and config.js.
 base_js.enable = true

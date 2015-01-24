@@ -19,7 +19,7 @@ def get_user(userident):
     """
 
     if not isinstance(userident, bytes):
-        userident = base64.b64decode(userident)
+        userident = base64.urlsafe_b64decode(userident)
 
     try:
         return (db.Session
