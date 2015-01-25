@@ -7,24 +7,26 @@ import {{project}}
 from pprint import pprint
 
 
+from {{project}} import init_config
+
 
 def main(global_config, **local_config):
     """
     """
+
+    global RootFactory
+    global ApiFactory
+
     print("Initializing Platform API...")
-    config, settings = {{project}}.init_config(global_config, local_config)
+    config, settings = init_config(global_config, local_config)
 
-    config.add_route('api_info', '/info')
-    config.scan('api.views')
+    RootFactory = config.get_settings()['RootFactory']
+    ApiFactory = config.get_settings()['ApiFactory']
 
-    # Set up API's for any composite applications.
-    for key, val in settings['composite'].items():
-        base = key if key.endswith('/') else key+'/'
-        key_uri = functools.partial(urllib.parse.urljoin, base)
-
-        if val == 'admin':
-            config.add_route('api_admin_info', key_uri('info'))
-            config.add_route('api_admin_users', key_uri('users'))
-            config.scan('admin.api')
+    config.add_route('api.info', '/info')
+    config.add_route('api.messaging.consume', '/messages')
+    
+    config.scan('{{project}}.api.views',
+                    ignore='{{project}}.api.views.auth')
 
     return config.make_wsgi_app()

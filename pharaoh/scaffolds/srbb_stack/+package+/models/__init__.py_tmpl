@@ -16,7 +16,6 @@ def init(settings):
 
     global EpochSeconds
 
-
     class EpochSeconds(sqlalchemy.types.TypeDecorator):
         impl = sqlalchemy.types.Integer
         epoch = (datetime.datetime.strptime(settings['database.epoch'],
@@ -24,11 +23,10 @@ def init(settings):
                                     .replace(tzinfo=settings['database.timezone']))
 
         def process_bind_param(self, value, dialect):
-            return (value - self.epoch).total_seconds()
+            return int((value - self.epoch).total_seconds())
 
         def process_result_value(self, value, dialect):
             return self.epoch + datetime.timedelta(seconds=value)
-
 
     class EpochDays(sqlalchemy.types.TypeDecorator):
         """

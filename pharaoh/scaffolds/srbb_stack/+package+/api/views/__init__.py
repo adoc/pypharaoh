@@ -14,7 +14,7 @@ def api_forbidden_view(request):
     return pyramid.httpexceptions.HTTPUnauthorized()
 
 
-@pyramid.view.view_config(route_name="api_info", renderer="json",
+@pyramid.view.view_config(route_name="api.info", renderer="json",
                             permission="view")
 def api_info(request):
 

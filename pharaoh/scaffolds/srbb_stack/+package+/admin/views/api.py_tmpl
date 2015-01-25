@@ -1,5 +1,5 @@
 """Hook API views.
-Note: This module should not be loaded from `admin` initialization but
+Note: Should this module be loaded from `admin` initialization or
 from `api` initialization.
 """
 

@@ -7,6 +7,9 @@ import pyramid.config
 import pyramid.scripts.common
 
 import {{project}}
+import {{project}}.models.auth
+import {{project}}.models.messaging
+
 from {{project}} import db
 from {{project}} import models
 
@@ -38,6 +41,8 @@ def main(argv=sys.argv):
             settings['database.enable']]):
         print("    Auth Models...")
         models.auth.init(settings)
+
+    models.messaging.init(settings)
 
     if settings['database.initialize.drop_all']:
         models.Base.metadata.drop_all(db.Engine)

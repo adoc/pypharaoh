@@ -9,7 +9,7 @@
 [composite:main] 
 use = call:{{project}}:boot_factory
 / = web 
-# /api/v1 = api
+/api/v1 = api
 /admin = admin 
 
 
@@ -102,6 +102,15 @@ authn.models.identity.use_password = true
 authz.models.enable = true
 authz.models.permissions.tablename = permissions
 
+# 
+# Builtin Principals:
+#   __authenticated__ - All authenticated users.
+#   
+authz.root_factory.permissions =
+    allow:roots:__all__
+    allow:admins:admin,edit,view,public
+    allow:__authenticated__:view,public
+    allow:__everyone__:public
 
 ###
 #  SQLAlchemy Settings
@@ -193,6 +202,9 @@ pyramid.includes =
     pyramid_debugtoolbar
     pyramid_tm
 
+messaging.enable = true
+
+
 [app:admin]
 use = call:{{project}}.admin:main
 filter-with = proxy_handle_admin
@@ -227,12 +239,6 @@ auth.renderer.login = login.html_mako
 auth.uri.login = /login
 auth.uri.logout = /logout
 auth.uri.after_logout = /
-
-authz.root_factory.permissions =
-    allow:roots:all
-    allow:admins:admin,edit,view,public
-    allow:users:view,public
-    allow:all:public
 
 beaker.session.type = memory
 beaker.session.secret = {{beaker_session_secret}}
@@ -285,12 +291,6 @@ auth.renderer.login = login.html_mako
 auth.uri.login = /login
 auth.uri.logout = /logout
 auth.uri.after_logout = /
-
-authz.root_factory.permissions =
-#    allow:roots:all
-#    allow:admins:admin,edit,view,public
-#    allow:users:view,public
-#    allow:all:public
 
 beaker.session.type = memory
 beaker.session.secret = {{beaker_session_secret}}

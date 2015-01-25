@@ -19,6 +19,7 @@ import pharaoh.auth
 
 import {{project}}.validators.auth
 import {{project}}.models.auth
+import {{project}}.models.messaging
 
 from {{project}} import db
 from {{project}} import models
@@ -149,17 +150,19 @@ def init_settings(settings):
     def parse_root_permissions():
         for init_perms in pyramid.settings.aslist(
                             settings.get('authz.root_factory.permissions', [])):
-            action, principal, permissions = init_perms.split(':')
+            action, principals, permissions = init_perms.split(':')
 
             action = (pyramid.security.Allow
                         if action.strip() == 'allow' else pyramid.security.Deny)
             
-            if principal == 'all':
-                principal = pyramid.security.Everyone
+            if principals in ('__any__', '__everyone__'):
+                principals = pyramid.security.Everyone
+            elif principals == '__authenticated__':
+                principals = pyramid.security.Authenticated
             else:
-                principal = ':'.join(['g', principal])
+                principals = ':'.join(['g', principals])
 
-            if permissions == 'all':
+            if permissions == '__all__':
                 permissions = pyramid.security.ALL_PERMISSIONS
             else:
                 def parse_permissions():
@@ -172,7 +175,7 @@ def init_settings(settings):
                 permissions = tuple(parse_permissions())
 
 
-            yield (action, principal, permissions)
+            yield (action, principals, permissions)
 
     settings['authz.root_factory.permissions'] = list(parse_root_permissions())
 
@@ -185,7 +188,10 @@ def init_settings(settings):
         settings['static.mapping'] = dict(parse_static_mapping())
 
     settings['static.serve'] = pyramid.settings.asbool(
-                                            settings.get('static.serve', False))
+                                        settings.get('static.serve', False))
+
+    settings['messaging.enable'] = pyramid.settings.asbool(
+                                        settings.get('messaging.enable', False))
 
     settings['base_js.enable'] = pyramid.settings.asbool(
                                         settings.get('base_js.enable', False))
@@ -323,6 +329,9 @@ def init_config(global_config, local_config):
                                     name='static_map_url')
         config.add_request_method(request_static_map('static_path'),
                                     name='static_map_path')
+
+    if 'messaging.enable' in settings and settings['messaging.enable'] is True:
+        models.messaging.init(settings)
 
     # Enable "common.js" and "config.js" routes as configured in the
     #   INI.

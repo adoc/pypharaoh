@@ -1,0 +1,99 @@
+import datetime
+import pytz
+
+import sqlalchemy
+import sqlalchemy.types
+import sqlalchemy.orm
+import sqlalchemy.ext.hybrid
+
+import {{project}}.models.auth
+from {{project}} import models
+from {{project}} import db
+
+
+# Email system or Flash message system??
+
+
+def init(settings):
+    global MessageQueue
+    global MessageTargets
+    global consume_iter
+
+    local_tz = settings['database.timezone']
+
+    datetime_fmt = ' '.join([settings['datetime.date_format'],
+                            settings['datetime.time_format']])
+
+    def now():
+        now_utc = datetime.datetime.utcnow().replace(tzinfo=pytz.UTC)
+        return now_utc.astimezone(local_tz)
+
+    def default_expires():
+        return now() + datetime.timedelta(days=1)
+
+    # SQLAlchemy Msg queue Model
+    class MessageQueue(models.Base):
+        """A messaging model like this would be implemented using Redis or
+        another platform, but we'll start with SQL.
+        """
+
+        __tablename__ = "message_queue"
+
+        id = sqlalchemy.Column(sqlalchemy.types.Integer, primary_key=True)
+        source_id = sqlalchemy.Column(sqlalchemy.types.Integer,
+                                    sqlalchemy.ForeignKey(models.auth.User.id),
+                                    nullable=True)
+
+        stamp = sqlalchemy.Column(models.EpochSeconds,
+                                    default=now)
+        expires = sqlalchemy.Column(models.EpochSeconds,
+                                    default=default_expires)
+        message = sqlalchemy.Column(sqlalchemy.types.LargeBinary(length=1024))
+        source = sqlalchemy.orm.relationship(models.auth.User)
+        targets = sqlalchemy.orm.relationship(models.auth.User,
+                secondary=lambda: MessageTargets.__table__,
+                primaryjoin="MessageQueue.id==MessageTargets.message_id",
+                secondaryjoin="MessageTargets.target_id==models.auth.User.id",
+                backref="messages")
+
+        def __json__(self, request):
+            return {
+                'source_id': self.source_id,
+                'message': self.message.decode(),
+                'datetime': self.stamp.strftime(datetime_fmt),
+                'expires': self.expires.strftime(datetime_fmt)
+            }
+
+    class MessageTargets(models.Base):
+        """
+        """
+
+        __tablename__ = "message_queue_targets"
+
+        id = sqlalchemy.Column(sqlalchemy.types.Integer, primary_key=True)
+        message_id = sqlalchemy.Column(sqlalchemy.types.Integer,
+                                sqlalchemy.ForeignKey(MessageQueue.id))
+        target_id = sqlalchemy.Column(sqlalchemy.types.Integer,
+                                sqlalchemy.ForeignKey(models.auth.User.id))
+        target = sqlalchemy.orm.relationship(models.auth.User)
+
+    def consume_iter(user):
+        """Yield the oldest message for a given ``user``. Remove the
+        ``user`` as a target on the message. Remove the message if it
+        has no more targets.
+        """
+        message = (db.Session
+                        .query(MessageQueue)
+                        .join(MessageTargets)
+                        .filter(MessageTargets.target==user)
+                        .order_by(MessageQueue.id.desc())
+                        .first())
+        if message: 
+            # Use the relationship to remove the message from the
+            #   user's queue.
+            user.messages.remove(message)
+            if not message.targets or now() >= message.expires: 
+                # Delete the message if there are no more
+                #   targets or the message has expired.
+                db.Session.delete(message)
+            yield message
