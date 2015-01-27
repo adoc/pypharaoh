@@ -1,20 +1,72 @@
 """
 """
 
+import transaction
 import pyramid.view
 
 import {{project}}.models.messaging
-
 from {{project}} import db
 from {{project}} import models
+from {{project}} import validators
 
 
-@pyramid.view.view_config(route_name="api.messaging.consume", renderer="json",
+@pyramid.view.view_config(route_name="api.messaging.all", renderer="json",
                             permission="view")
-def consume(request):
+def all(request):
     """
     """
 
-    return list(models.messaging.consume_iter(request.this_user))
+    return list(models.messaging.consume_iter(request.this_user,
+                    flash_only='flash' in request.params))
 
 
+@pyramid.view.view_config(route_name="api.messaging.send", renderer="json",
+                            permission="view")
+def sent(request):
+    """
+    """
+    # TODO: Validate this
+    # params = request.json_body
+
+    params = validators.MessageSchema().to_python(request.json_body)
+
+    def send_message(request):
+        def build_targets():
+            for target in params['targets']:
+                type_, entity = target.split(":")
+
+                try:
+                    entity = int(entity)
+                except ValueError:
+                    pass
+
+                if type_ == 'u':
+                    query = db.Session.query(models.auth.User)
+                    if isinstance(entity, str):
+                        yield query.filter(models.auth.User.name==entity).one()
+                    elif isinstance(entity, int):
+                        yield query.get(entity)
+                    else:
+                        raise ValueError("Expected either a string or integer "
+                                "entity. Validation should have caught this.")
+                if type_ == 'g':
+                    query = db.Session.query(models.auth.Group)
+                    if isinstance(entity, str):
+                        group = query.filter(models.auth.Group.name==entity).one()
+                    elif isinstance(entity, int):
+                        group = query.get(entity)
+                    else:
+                        raise ValueError("Expected either a string or integer "
+                                "entity. Validation should have caught this.")
+
+                    for user in group.users:
+                        yield user
+
+        models.messaging.send(request.this_user, params['message'],
+                                    list(set(build_targets())),
+                                    flash=params['flash'])
+        transaction.manager.commit()
+
+    request.add_finished_callback(send_message)
+
+    return {}

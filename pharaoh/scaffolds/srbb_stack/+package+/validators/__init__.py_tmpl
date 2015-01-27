@@ -1,0 +1,50 @@
+"""Core package validators.
+"""
+
+import re
+import html
+import formencode
+
+
+_alpha = re.compile('[\W_]+')
+
+
+class EscapedString(formencode.validators.ByteString):
+    """
+    """
+
+    def _convert_to_python(self, value, state):
+        value = formencode.validators.ByteString._convert_to_python(self,
+                                                                value, state)
+        return html.escape(value)
+
+
+class MessageTarget(formencode.validators.FancyValidator):
+    """
+    """
+    def _validate_python(self, value, state):
+        type_, entity = value.split(":")
+
+        if type_ not in ('u', 'g'):
+            raise(formencode.Invalid("Message targets must be prefixed "
+                    "with a 'u:' or 'g:'."))
+
+        if not entity:
+            raise(formencode.Invalid("Message target missing an entity."))
+
+
+
+def init(config, settings):
+    global month_style
+    global MessageSchema
+
+    month_style = _alpha.sub('', settings['datetime.date_format']).lower()
+
+    class MessageSchema(formencode.schema.Schema):
+        allow_extra_fields = True
+        filter_extra_fields = True
+        ignore_key_missing = True
+
+        message = EscapedString(min=3, max=1024)
+        targets = formencode.foreach.ForEach(MessageTarget(max=10))
+        flash = formencode.validators.StringBool(if_missing=False)

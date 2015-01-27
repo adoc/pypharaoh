@@ -4,6 +4,7 @@ import pytz
 import sqlalchemy
 import sqlalchemy.types
 import sqlalchemy.orm
+import sqlalchemy.event
 import sqlalchemy.ext.hybrid
 
 import {{project}}.models.auth
@@ -11,89 +12,153 @@ from {{project}} import models
 from {{project}} import db
 
 
-# Email system or Flash message system??
-
-
 def init(settings):
-    global MessageQueue
-    global MessageTargets
+    global Message
     global consume_iter
+    global send
 
-    local_tz = settings['database.timezone']
+    db_tz = settings['database.timezone']
+    local_tz = settings['datetime.local_timezone']
 
-    datetime_fmt = ' '.join([settings['datetime.date_format'],
-                            settings['datetime.time_format']])
+    date_fmt = settings['datetime.date_format']
+    time_fmt = settings['datetime.time_format']
 
     def now():
         now_utc = datetime.datetime.utcnow().replace(tzinfo=pytz.UTC)
-        return now_utc.astimezone(local_tz)
+        return now_utc.astimezone(db_tz)
 
-    def default_expires():
-        return now() + datetime.timedelta(days=1)
+    def default_expires(context):
+        if context.current_parameters['flash'] is True:
+            return now() + datetime.timedelta(days=1)
+        else:
+            return now() + datetime.timedelta(days=365)
 
     # SQLAlchemy Msg queue Model
-    class MessageQueue(models.Base):
-        """A messaging model like this would be implemented using Redis or
-        another platform, but we'll start with SQL.
+    class Message(models.Base):
+        """A messaging model like this would be implemented using Redis
+        or possibly RabbitMQ, but we offer SQL for a reference and for
+        small scale deployments.
         """
 
-        __tablename__ = "message_queue"
+        __tablename__ = "messages"
 
         id = sqlalchemy.Column(sqlalchemy.types.Integer, primary_key=True)
-        source_id = sqlalchemy.Column(sqlalchemy.types.Integer,
+        sender_id = sqlalchemy.Column(sqlalchemy.types.Integer,
                                     sqlalchemy.ForeignKey(models.auth.User.id),
                                     nullable=True)
-
+        flash = sqlalchemy.Column(sqlalchemy.types.Boolean, default=False)
         stamp = sqlalchemy.Column(models.EpochSeconds,
                                     default=now)
         expires = sqlalchemy.Column(models.EpochSeconds,
                                     default=default_expires)
         message = sqlalchemy.Column(sqlalchemy.types.LargeBinary(length=1024))
-        source = sqlalchemy.orm.relationship(models.auth.User)
+        sender = sqlalchemy.orm.relationship(models.auth.User)
         targets = sqlalchemy.orm.relationship(models.auth.User,
                 secondary=lambda: MessageTargets.__table__,
-                primaryjoin="MessageQueue.id==MessageTargets.message_id",
-                secondaryjoin="MessageTargets.target_id==models.auth.User.id",
+                primaryjoin=lambda: Message.id==MessageTargets.message_id,
+                secondaryjoin=
+                        lambda: MessageTargets.target_id==models.auth.User.id,
                 backref="messages")
 
         def __json__(self, request):
-            return {
-                'source_id': self.source_id,
+            # Get the local_tz from request at some point.
+            local_stamp = self.stamp.astimezone(local_tz)
+
+            obj = {
+                'id': self.id,
+                'sender_id': self.sender_id,
+                'flash': self.flash,
                 'message': self.message.decode(),
-                'datetime': self.stamp.strftime(datetime_fmt),
-                'expires': self.expires.strftime(datetime_fmt)
-            }
+                'stamp_date': self.stamp.strftime(date_fmt),
+                'stamp_date_local': local_stamp.strftime(date_fmt),
+                'stamp_time': self.stamp.strftime(time_fmt),
+                'stamp_time_local': local_stamp.strftime(time_fmt)}
+
+            if self.flash is True:
+                obj.update({})
+
+            return obj
+
+    @sqlalchemy.event.listens_for(Message.targets, 'remove')
+    def targets_remove_listener(message, target, initiator):
+        """Listens to ``targets`` attribute update on a ``Message``.
+        Deletes the message when there are no more targets.
+        """
+        targets = (db.Session.query(MessageTargets)
+                    .join(Message)
+                    .filter(Message.id==message.id)
+                    .count())
+
+        if targets == 0:
+            # For whatever reason, the ``targets`` query makes a
+            # db.Session.delete(message) statement fail here. So
+            # instead we query for the object and delete it.
+            db.Session.query(Message).filter(Message.id==message.id).delete()
 
     class MessageTargets(models.Base):
         """
         """
 
-        __tablename__ = "message_queue_targets"
+        __tablename__ = "message_targets"
 
         id = sqlalchemy.Column(sqlalchemy.types.Integer, primary_key=True)
         message_id = sqlalchemy.Column(sqlalchemy.types.Integer,
-                                sqlalchemy.ForeignKey(MessageQueue.id))
+                                sqlalchemy.ForeignKey(Message.id))
         target_id = sqlalchemy.Column(sqlalchemy.types.Integer,
                                 sqlalchemy.ForeignKey(models.auth.User.id))
         target = sqlalchemy.orm.relationship(models.auth.User)
 
-    def consume_iter(user):
+    def consume_iter(user, flash_only=False):
         """Yield the oldest message for a given ``user``. Remove the
         ``user`` as a target on the message. Remove the message if it
         has no more targets.
         """
-        message = (db.Session
-                        .query(MessageQueue)
+
+        if flash_only is True:
+            filter = sqlalchemy.and_(MessageTargets.target==user,
+                                        Message.flash is True)
+        else:
+            filter = MessageTargets.target==user
+
+        for message in (db.Session
+                        .query(Message)
                         .join(MessageTargets)
-                        .filter(MessageTargets.target==user)
-                        .order_by(MessageQueue.id.desc())
-                        .first())
-        if message: 
-            # Use the relationship to remove the message from the
-            #   user's queue.
-            user.messages.remove(message)
-            if not message.targets or now() >= message.expires: 
-                # Delete the message if there are no more
-                #   targets or the message has expired.
-                db.Session.delete(message)
+                        .filter(filter)
+                        .order_by(Message.id.desc())
+                        .all()):
+
+            if message.flash is True:
+                # Use the relationship to remove the message from the
+                #   user's queue.
+                user.messages.remove(message)
+                if now() >= message.expires:
+                    db.Session.delete(message)
+
+
+            #if not message.targets:
+            #    # Delete the message if there are no more
+            #    #   targets.
+            #    db.Session.delete(message)
+
             yield message
+
+    def send(sender, message, targets, flash=False):
+        send_targets = set()
+
+        for target in targets:
+            if isinstance(target, models.auth.Group):
+                for user in target.users:
+                    send_targets.add(user)
+            else:
+                send_targets.add(target)
+
+        if not isinstance(message, bytes):
+            message = message.encode()
+
+        message = Message(sender=sender, message=message,
+                            targets=list(send_targets),
+                            flash=flash is True)
+
+        db.Session.add(message)
+
+        return message

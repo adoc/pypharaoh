@@ -5,7 +5,7 @@ import pyramid.view
 
 
 @pyramid.view.view_config(route_name="home", renderer="home.html_mako",
-                            permission="admin")
+                            permission="view")
 def home(request):
     """
     """
