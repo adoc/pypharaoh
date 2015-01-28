@@ -34,9 +34,13 @@ def main(global_config, **local_config):
     config.add_route('api.messaging.get', '/messages/{id}',
                         request_method=("HEAD", "GET"),
                         factory=ApiFactory)
-    config.add_route('api.messaging.del', '/messages/{id}',
+    config.add_route('api.messaging.delete', '/messages/{id}',
                         request_method=("DELETE",),
                         factory=ApiFactory)
+
+    # debug routes/views
+    config.add_route('naughty', '/n')
+    config.add_view(".api.views.messaging.naughty", route_name="naughty", renderer="json")
 
     config.scan('{{project}}.api.views',
                         ignore='{{project}}.api.views.auth')

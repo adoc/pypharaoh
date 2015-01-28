@@ -10,10 +10,23 @@ from {{project}} import models
 from {{project}} import validators
 
 
+
+def naughty(request):
+    """Debug function to disable an event.
+    """
+    import sqlalchemy.event
+
+    sqlalchemy.event.remove(models.messaging.Message, 'load',
+                                        models.messaging.message_load_listener)
+
+    return {'naught': True}
+
+
+
 @pyramid.view.view_config(route_name="api.messaging.all", renderer="json",
                             permission="view")
 def all(request):
-    """
+    """Gets all messages for this given user.
     """
 
     return list(models.messaging.consume_iter(request.this_user,
@@ -22,11 +35,9 @@ def all(request):
 
 @pyramid.view.view_config(route_name="api.messaging.send", renderer="json",
                             permission="view")
-def sent(request):
+def send(request):
     """
     """
-    # TODO: Validate this
-    # params = request.json_body
 
     params = validators.MessageSchema().to_python(request.json_body)
 
@@ -64,9 +75,18 @@ def sent(request):
 
         models.messaging.send(request.this_user, params['message'],
                                     list(set(build_targets())),
+                                    expires=params['expires'],
                                     flash=params['flash'])
         transaction.manager.commit()
 
     request.add_finished_callback(send_message)
 
     return {}
+
+
+@pyramid.view.view_config(route_name="api.messaging.delete", renderer="json",
+                            permission="view")
+def delete(request):
+    """
+    """
+    pass

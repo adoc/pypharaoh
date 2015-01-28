@@ -1,3 +1,6 @@
+import logging
+log = logging.getLogger(__name__)
+
 import datetime
 import pytz
 
@@ -42,14 +45,19 @@ def init(settings):
 
         __tablename__ = "messages"
 
+        __mapper_args__ = {
+            'polymorphic_identity': False,
+            'polymorphic_on': '_flash'
+        }
+
         id = sqlalchemy.Column(sqlalchemy.types.Integer, primary_key=True)
         sender_id = sqlalchemy.Column(sqlalchemy.types.Integer,
                                     sqlalchemy.ForeignKey(models.auth.User.id),
                                     nullable=True)
-        flash = sqlalchemy.Column(sqlalchemy.types.Boolean, default=False)
+        _flash = sqlalchemy.Column('flash', sqlalchemy.types.Boolean, default=False)
         stamp = sqlalchemy.Column(models.EpochSeconds,
                                     default=now)
-        expires = sqlalchemy.Column(models.EpochSeconds,
+        _expires = sqlalchemy.Column('expires', models.EpochSeconds,
                                     default=default_expires)
         message = sqlalchemy.Column(sqlalchemy.types.LargeBinary(length=1024))
         sender = sqlalchemy.orm.relationship(models.auth.User)
@@ -60,6 +68,18 @@ def init(settings):
                         lambda: MessageTargets.target_id==models.auth.User.id,
                 backref="messages")
 
+        @sqlalchemy.ext.hybrid.hybrid_property
+        def expires(self):
+            return self._expires
+
+        @expires.setter
+        def expires(self, seconds):
+            self._expires = now() + datetime.timedelta(seconds=seconds)
+
+        @expires.expression
+        def expires(cls):
+            return cls._expires
+
         def __json__(self, request):
             # Get the local_tz from request at some point.
             local_stamp = self.stamp.astimezone(local_tz)
@@ -67,20 +87,25 @@ def init(settings):
             obj = {
                 'id': self.id,
                 'sender_id': self.sender_id,
-                'flash': self.flash,
+                'flash': self._flash,
                 'message': self.message.decode(),
                 'stamp_date': self.stamp.strftime(date_fmt),
                 'stamp_date_local': local_stamp.strftime(date_fmt),
                 'stamp_time': self.stamp.strftime(time_fmt),
                 'stamp_time_local': local_stamp.strftime(time_fmt)}
 
-            if self.flash is True:
-                obj.update({})
-
             return obj
 
+
+    global FlashMessage
+    class FlashMessage(Message):
+        __mapper_args__ = {
+            'polymorphic_identity':True,
+        }
+
+
     @sqlalchemy.event.listens_for(Message.targets, 'remove')
-    def targets_remove_listener(message, target, initiator):
+    def targets_remove_listener(message, removed_target, initiator):
         """Listens to ``targets`` attribute update on a ``Message``.
         Deletes the message when there are no more targets.
         """
@@ -90,10 +115,39 @@ def init(settings):
                     .count())
 
         if targets == 0:
+            log.info("Message id:%s has no more targets. Deleting." %
+                                                                    message.id)
             # For whatever reason, the ``targets`` query makes a
             # db.Session.delete(message) statement fail here. So
             # instead we query for the object and delete it.
             db.Session.query(Message).filter(Message.id==message.id).delete()
+
+    global message_load_listener
+    @sqlalchemy.event.listens_for(Message, 'load', propagate=True)
+    def message_load_listener(message, context):
+        """Check expire on Message object.
+        """
+        print("Checking message %s expire." % message.id)
+        if now() >= message.expires:
+            print("Expiring message %s." % message.id)
+            db.Session.delete(message)
+
+    global flash_message_load_listener
+    @sqlalchemy.event.listens_for(FlashMessage, 'load')
+    def flash_message_load_listener(message, context):
+        """
+        """
+        #print("Flash Message Load Listener")
+        if hasattr(context.query, '_user'):
+            user = context.query._user  # There should be a better way
+                                        # to pass query metadata here.
+            #print("Flash message, removing from user's messages")
+            # Use the relationship to remove the message from the
+            #   user's queue.
+            user.messages.remove(message)
+        else:
+            log.error("Flash Message Load Listener encountered a case where "
+                        "no _user was set to the query.")
 
     class MessageTargets(models.Base):
         """
@@ -115,34 +169,25 @@ def init(settings):
         """
 
         if flash_only is True:
-            filter = sqlalchemy.and_(MessageTargets.target==user,
-                                        Message.flash is True)
+            query = db.Session.query(FlashMessage)
         else:
-            filter = MessageTargets.target==user
+            query = db.Session.query(Message)
 
-        for message in (db.Session
-                        .query(Message)
+        # Sets a reference to the consuming user for
+        #    use in the ``message_load_listener``
+        #    event.
+        # TODO: Find a better way to accomplish this. (Good luck!!))
+        query._user = user 
+
+        for message in (query
                         .join(MessageTargets)
-                        .filter(filter)
+                        .filter(MessageTargets.target==user)
                         .order_by(Message.id.desc())
                         .all()):
 
-            if message.flash is True:
-                # Use the relationship to remove the message from the
-                #   user's queue.
-                user.messages.remove(message)
-                if now() >= message.expires:
-                    db.Session.delete(message)
-
-
-            #if not message.targets:
-            #    # Delete the message if there are no more
-            #    #   targets.
-            #    db.Session.delete(message)
-
             yield message
 
-    def send(sender, message, targets, flash=False):
+    def send(sender, message, targets, expires=None, flash=False):
         send_targets = set()
 
         for target in targets:
@@ -155,9 +200,14 @@ def init(settings):
         if not isinstance(message, bytes):
             message = message.encode()
 
-        message = Message(sender=sender, message=message,
+        if flash is True:
+            msg_class = FlashMessage
+        else:
+            msg_class = Message
+
+        message = msg_class(sender=sender, message=message,
                             targets=list(send_targets),
-                            flash=flash is True)
+                            expires=expires or default_expires())
 
         db.Session.add(message)
 

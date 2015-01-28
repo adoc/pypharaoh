@@ -48,3 +48,4 @@ def init(config, settings):
         message = EscapedString(min=3, max=1024)
         targets = formencode.foreach.ForEach(MessageTarget(max=10))
         flash = formencode.validators.StringBool(if_missing=False)
+        expires = formencode.validators.Int(min=0)
