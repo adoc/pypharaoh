@@ -1,6 +1,9 @@
 """
 """
 
+import sqlalchemy
+import sqlalchemy.orm.exc
+
 import transaction
 import pyramid.view
 
@@ -60,20 +63,36 @@ def send(request):
                     for user in group.users:
                         yield user
 
-        models.messaging.send(request.this_user, params['message'],
+        with transaction.manager:
+            models.messaging.send(request.this_user, params['message'],
                                     list(set(build_targets())),
                                     expires=params['expires'],
                                     flash=params['flash'])
-        transaction.manager.commit()
+        #transaction.manager.commit()
 
     request.add_finished_callback(send_message)
 
     return {}
 
 
+@pyramid.view.view_config(route_name="api.messaging.get", renderer="json",
+                            permission="view")
+def get(request):
+    """
+    """
+
+    return models.messaging.get(int(request.matchdict['id']), request.this_user)
+
+
 @pyramid.view.view_config(route_name="api.messaging.delete", renderer="json",
                             permission="view")
 def delete(request):
+    """When a user deletes a message, they only delete themselves as a
+    target of that message.
     """
-    """
-    int(request.matchdict['id'])
+
+    if models.messaging.remove_target(int(request.matchdict['id']),
+                                        request.this_user):
+        return {'status': 'ok'}
+    else:
+        return {'status': 'error'}

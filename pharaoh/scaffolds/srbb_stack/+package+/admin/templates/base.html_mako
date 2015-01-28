@@ -89,7 +89,8 @@
         <script type="text/javascript">
             require(['models', 'views', 'bootstrap', 'raphael', 'morris'], function (Models, Views) {
                 var infoModel = new Models.Info(),
-                    user_dropdown = new Views.userDropdown({infoModel: infoModel});
+                    user_dropdown = new Views.userDropdown({infoModel: infoModel}),
+                    message_dropdown = new Views.messageDropdown();
 
                 infoModel.fetch();
             });

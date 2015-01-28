@@ -1,3 +1,6 @@
+"""
+"""
+
 import logging
 log = logging.getLogger(__name__)
 
@@ -16,8 +19,8 @@ from {{project}} import db
 
 
 def init(settings):
-    
-
+    """
+    """
 
     db_tz = settings['database.timezone']
     local_tz = settings['datetime.local_timezone']
@@ -96,14 +99,30 @@ def init(settings):
 
             return obj
 
-
     global FlashMessage
     class FlashMessage(Message):
         __mapper_args__ = {
             'polymorphic_identity':True,
         }
 
+    global MessageTargets
+    class MessageTargets(models.Base):
+        """
+        """
 
+        __tablename__ = "message_targets"
+
+        id = sqlalchemy.Column(sqlalchemy.types.Integer, primary_key=True)
+        message_id = sqlalchemy.Column(sqlalchemy.types.Integer,
+                                sqlalchemy.ForeignKey(Message.id,
+                                                        ondelete="CASCADE"))
+        target_id = sqlalchemy.Column(sqlalchemy.types.Integer,
+                                sqlalchemy.ForeignKey(models.auth.User.id,
+                                                        ondelete="CASCADE"))
+        target = sqlalchemy.orm.relationship(models.auth.User)
+
+    # Events
+    ###
     global targets_remove_listener
     @sqlalchemy.event.listens_for(Message.targets, 'remove')
     def targets_remove_listener(message, removed_target, initiator):
@@ -118,10 +137,15 @@ def init(settings):
         if targets == 0:
             log.info("Message id:%s has no more targets. Deleting." %
                                                                     message.id)
+            db.Session.delete(message)
+            db.Session.flush()
             # For whatever reason, the ``targets`` query makes a
             # db.Session.delete(message) statement fail here. So
             # instead we query for the object and delete it.
-            db.Session.query(Message).filter(Message.id==message.id).delete()
+            #(db.Session.query(Message)
+            #    .filter(Message.id==message.id)
+            #    .join(MessageTargets)
+            #    .delete())
 
     global message_load_listener
     @sqlalchemy.event.listens_for(Message, 'load', propagate=True)
@@ -132,13 +156,13 @@ def init(settings):
         if now() >= message.expires:
             print("Expiring message %s." % message.id)
             db.Session.delete(message)
+            db.Session.flush()
 
     global flash_message_load_listener
     @sqlalchemy.event.listens_for(FlashMessage, 'load')
     def flash_message_load_listener(message, context):
         """
         """
-        #print("Flash Message Load Listener")
         if hasattr(context.query, '_user'):
             user = context.query._user  # There should be a better way
                                         # to pass query metadata here.
@@ -150,19 +174,8 @@ def init(settings):
             log.error("Flash Message Load Listener encountered a case where "
                         "no _user was set to the query.")
 
-    class MessageTargets(models.Base):
-        """
-        """
-
-        __tablename__ = "message_targets"
-
-        id = sqlalchemy.Column(sqlalchemy.types.Integer, primary_key=True)
-        message_id = sqlalchemy.Column(sqlalchemy.types.Integer,
-                                sqlalchemy.ForeignKey(Message.id))
-        target_id = sqlalchemy.Column(sqlalchemy.types.Integer,
-                                sqlalchemy.ForeignKey(models.auth.User.id))
-        target = sqlalchemy.orm.relationship(models.auth.User)
-
+    # Util Functions
+    ###
     global consume_iter
     def consume_iter(user, flash_only=False):
         """Yield the oldest message for a given ``user``. Remove the
@@ -186,8 +199,8 @@ def init(settings):
                         .filter(MessageTargets.target==user)
                         .order_by(Message.id.desc())
                         .all()):
-
-            yield message
+            if sqlalchemy.inspect(message).deleted is False:
+                yield message
 
     global send
     def send(sender, message, targets, expires=None, flash=False):
@@ -215,3 +228,32 @@ def init(settings):
         db.Session.add(message)
 
         return message
+
+    global get
+    def get(id_, user):
+        """
+        """
+
+        try:
+            message = (db.Session
+                            .query(Message)
+                            .join(MessageTargets)
+                            .filter(Message.id==id_)
+                            .filter(MessageTargets.target==user)
+                            .one())
+        except sqlalchemy.orm.exc.NoResultFound:
+            return {}
+        else:
+            if sqlalchemy.inspect(message).deleted is False:
+                 return message
+
+    global remove_target
+    def remove_target(id_, user):
+        """
+        """
+
+        message = get(id_, user)
+        if message:
+            #if this_user in message.targets:
+            message.targets.remove(user)
+            return message

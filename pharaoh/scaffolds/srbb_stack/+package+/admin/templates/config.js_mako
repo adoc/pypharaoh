@@ -12,6 +12,7 @@ define([], function () {
             info: ${json.dumps(request.route_path('api.info'))|n},
             users: ${json.dumps(request.route_path('api.users'))|n},
             groups: ${json.dumps(request.route_path('api.groups'))|n}
+            messaging: ${json.dumps(request.route_url('api.messaging'))|n}
         }
     };
 

@@ -25,6 +25,14 @@ define(['underscore', 'jquery', 'backbone', 'config'],
             url: Config.uri.api.groups
         });
 
+        Models.Message = Backbone.Model.extend({
+            urlRoot: Config.uri.api.messaging
+        });
+
+        Models.Messages = Backbone.Model.extend({
+            url: Config.uri.api.messaging
+        });
+
         return Models;
     }
 );

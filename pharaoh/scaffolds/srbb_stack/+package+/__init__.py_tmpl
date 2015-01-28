@@ -223,12 +223,15 @@ def init_config(global_config, local_config):
     """Initialize each application's configuration.
     """
 
+
+
     # Handle the settings/config
     settings = copy.deepcopy(global_config)
     settings.update(local_config)
     init_settings(settings)
 
     config = pyramid.config.Configurator(settings=settings)
+    import pdb; pdb.set_trace()
 
     # Set up a dotted name resolver.
     caller = pyramid.path.caller_package()
@@ -380,6 +383,9 @@ def boot_factory(loader, global_config, **local_config):
         print("    Auth Models...")
         models.auth.init(global_config)
 
-    global_config['composite'] = local_config
+    #global_config['composite'] = local_config
+    #global_config['composite'] = {}
+    #for k, v in local_config.items():
+    #    global_config['composite'][v] = {}
 
     return rutter.urlmap.urlmap_factory(loader, global_config, **local_config)

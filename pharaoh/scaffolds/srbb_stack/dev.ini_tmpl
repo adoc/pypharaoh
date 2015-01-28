@@ -9,8 +9,8 @@
 [composite:main] 
 use = call:{{project}}:boot_factory
 / = web 
-/api/v1 = api
-/admin = admin 
+/api/v1/ = api
+/admin/ = admin 
 
 
 # Use ``paste.deploy.prefix`` to parse web server reverse proxy
@@ -31,8 +31,10 @@ use = egg:PasteDeploy#prefix
 
 [DEFAULT]
 ###
-#  Application specificationfic Settings
+#  Application specific Settings
 ###
+url.api = http://127.0.0.1:6543/api/v1/
+
 site.meta.title = SRBB
 site.meta.description = SRBB Scaffolding base installation.
 site.meta.author = http://github.com/adoc
