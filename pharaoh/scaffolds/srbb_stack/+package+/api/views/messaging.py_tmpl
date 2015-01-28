@@ -10,19 +10,6 @@ from {{project}} import models
 from {{project}} import validators
 
 
-
-def naughty(request):
-    """Debug function to disable an event.
-    """
-    import sqlalchemy.event
-
-    sqlalchemy.event.remove(models.messaging.Message, 'load',
-                                        models.messaging.message_load_listener)
-
-    return {'naught': True}
-
-
-
 @pyramid.view.view_config(route_name="api.messaging.all", renderer="json",
                             permission="view")
 def all(request):
@@ -89,4 +76,4 @@ def send(request):
 def delete(request):
     """
     """
-    pass
+    int(request.matchdict['id'])

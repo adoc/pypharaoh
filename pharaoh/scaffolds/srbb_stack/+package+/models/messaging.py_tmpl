@@ -16,9 +16,8 @@ from {{project}} import db
 
 
 def init(settings):
-    global Message
-    global consume_iter
-    global send
+    
+
 
     db_tz = settings['database.timezone']
     local_tz = settings['datetime.local_timezone']
@@ -37,6 +36,7 @@ def init(settings):
             return now() + datetime.timedelta(days=365)
 
     # SQLAlchemy Msg queue Model
+    global Message
     class Message(models.Base):
         """A messaging model like this would be implemented using Redis
         or possibly RabbitMQ, but we offer SQL for a reference and for
@@ -104,6 +104,7 @@ def init(settings):
         }
 
 
+    global targets_remove_listener
     @sqlalchemy.event.listens_for(Message.targets, 'remove')
     def targets_remove_listener(message, removed_target, initiator):
         """Listens to ``targets`` attribute update on a ``Message``.
@@ -162,6 +163,7 @@ def init(settings):
                                 sqlalchemy.ForeignKey(models.auth.User.id))
         target = sqlalchemy.orm.relationship(models.auth.User)
 
+    global consume_iter
     def consume_iter(user, flash_only=False):
         """Yield the oldest message for a given ``user``. Remove the
         ``user`` as a target on the message. Remove the message if it
@@ -187,6 +189,7 @@ def init(settings):
 
             yield message
 
+    global send
     def send(sender, message, targets, expires=None, flash=False):
         send_targets = set()
 

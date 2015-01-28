@@ -38,10 +38,6 @@ def main(global_config, **local_config):
                         request_method=("DELETE",),
                         factory=ApiFactory)
 
-    # debug routes/views
-    config.add_route('naughty', '/n')
-    config.add_view(".api.views.messaging.naughty", route_name="naughty", renderer="json")
-
     config.scan('{{project}}.api.views',
                         ignore='{{project}}.api.views.auth')
 
