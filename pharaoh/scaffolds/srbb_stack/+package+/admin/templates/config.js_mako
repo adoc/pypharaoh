@@ -7,11 +7,11 @@ define([], function () {
     var Config = {};
 
     Config.uri = {
-        logout: ${json.dumps(request.route_path('auth.logout'))|n},
+        logout: ${json.dumps(request.route_url('auth.logout'))|n},
         api: {
-            info: ${json.dumps(request.route_path('api.info'))|n},
-            users: ${json.dumps(request.route_path('api.users'))|n},
-            groups: ${json.dumps(request.route_path('api.groups'))|n}
+            info: ${json.dumps(request.route_url('api.info'))|n},
+            users: ${json.dumps(request.route_url('api.users'))|n},
+            groups: ${json.dumps(request.route_url('api.groups'))|n},
             messaging: ${json.dumps(request.route_url('api.messaging'))|n}
         }
     };

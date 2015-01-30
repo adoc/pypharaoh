@@ -1,6 +1,8 @@
 """Administration Panel Initialization.
 """
 
+import urllib.parse
+
 from {{project}} import init_config
 
 
@@ -8,15 +10,13 @@ def main(global_config, **local_config):
     """This function returns a Pyramid WSGI application.
     """
     
-    global RootFactory
-    global ApiFactory
+    global Factories
 
     print("Initializing Platform Admin Dashboard...")
 
     config, settings = init_config(global_config, local_config)
 
-    RootFactory = config.get_settings()['RootFactory']
-    ApiFactory = config.get_settings()['ApiFactory']
+    Factories = config.registry.settings['Factories']
 
     # Set up web routes.
     config.add_route('home', '/')
@@ -24,11 +24,22 @@ def main(global_config, **local_config):
 
     # Contain API calls in to ApiFactory.
     # TODO: try to use config.include and route_prefix to set these.
-    config.add_route('api.info', '/api/v1/info', factory=ApiFactory)
-    config.add_route('api.users', '/api/v1/users', factory=ApiFactory)
-    config.add_route('api.groups', '/api/v1/groups', factory=ApiFactory)
+    config.add_route('api.info', '/api/v1/info', factory=Factories.Api)
+    config.add_route('api.users', '/api/v1/users', factory=Factories.Api)
+    config.add_route('api.groups', '/api/v1/groups', factory=Factories.Api)
 
-    config.add_route('api.messaging','//api/v1/messaging', static=True)
+    def init_api_static_routes(route_name, uri):
+        if uri.startswith('/'):
+            uri = uri.lstrip('/')
+
+        api_root = settings['api.url']
+        config.add_route(route_name,
+                            urllib.parse.urljoin(api_root, uri),
+                            static=True)
+
+    # Generation only routes for the API.
+    init_api_static_routes('api.messaging', 'messages')
+
 
     config.scan('{{project}}.admin.views',
                     ignore='{{project}}.admin.views.auth')

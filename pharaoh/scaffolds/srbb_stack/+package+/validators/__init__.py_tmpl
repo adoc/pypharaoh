@@ -33,7 +33,6 @@ class MessageTarget(formencode.validators.FancyValidator):
             raise(formencode.Invalid("Message target missing an entity."))
 
 
-
 def init(config, settings):
     global month_style
     global MessageSchema
@@ -48,4 +47,4 @@ def init(config, settings):
         message = EscapedString(min=3, max=1024)
         targets = formencode.foreach.ForEach(MessageTarget(max=10))
         flash = formencode.validators.StringBool(if_missing=False)
-        expires = formencode.validators.Int(min=0)
+        expires = formencode.validators.Int(min=0, if_missing=None)

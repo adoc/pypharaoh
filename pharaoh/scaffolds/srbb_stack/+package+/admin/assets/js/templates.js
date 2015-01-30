@@ -4,13 +4,15 @@ define(['underscore',
         text_url("user_dropdown.html.tmpl"),
         text_url("alert_dropdown.html.tmpl"),
         text_url("users_list_table_body.html.tmpl"),
-        text_url("groups_list_table_body.html.tmpl")],
+        text_url("groups_list_table_body.html.tmpl"),
+        text_url("message_dropdown.html.tmpl")],
 
     function(_,
             userDropdownTemplate,
             alertDropdownTemplate,
             usersListTableTemplate,
-            groupsListTableTemplate) {
+            groupsListTableTemplate,
+            messagesDropdownTemplate) {
 
         var Templates = {};
 
@@ -19,6 +21,7 @@ define(['underscore',
         Templates.alertDropdown = _.template(alertDropdownTemplate);
         Templates.usersListTable = _.template(usersListTableTemplate);
         Templates.groupsListTable = _.template(groupsListTableTemplate);
+        Templates.messagesDropdown = _.template(messagesDropdownTemplate);
 
         return Templates;
     }

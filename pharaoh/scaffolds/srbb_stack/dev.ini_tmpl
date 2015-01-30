@@ -8,12 +8,12 @@
 
 [composite:main] 
 use = call:{{project}}:boot_factory
-/ = web 
-/api/v1/ = api
+/ = web
 /admin/ = admin 
+/api/v1/ = api
 
 
-# Use ``paste.deploy.prefix`` to parse web server reverse proxy
+# Use ``paste.deploy.prefix`` to cparse web server reverse proxy
 #   environment data. "prefix" must match the prefix used in the
 #   "composite" section.
 [filter:proxy_handle_web]
@@ -21,11 +21,11 @@ prefix = /
 use = egg:PasteDeploy#prefix
 
 [filter:proxy_handle_admin]
-prefix = /admin
+prefix = /admin/
 use = egg:PasteDeploy#prefix
 
 [filter:proxy_handle_api]
-prefix = /api
+prefix = /api/vi/
 use = egg:PasteDeploy#prefix
 
 
@@ -33,7 +33,6 @@ use = egg:PasteDeploy#prefix
 ###
 #  Application specific Settings
 ###
-url.api = http://127.0.0.1:6543/api/v1/
 
 site.meta.title = SRBB
 site.meta.description = SRBB Scaffolding base installation.
@@ -51,6 +50,8 @@ database.enable = true
 database.initialize.drop_all = true
 database.epoch = 1970-1-1
 database.timezone = UTC
+
+api.url = http://127.0.0.1:6543/api/v1/
 
 # Enable authentication and authorization.
 auth.enable = true
@@ -344,11 +345,11 @@ keys = console
 keys = generic
 
 [logger_root]
-level = INFO
+level = WARN
 handlers = console
 
 [logger_{{package_logger}}]
-level = DEBUG
+level = WARN
 handlers =
 qualname = {{package}}
 

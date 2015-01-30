@@ -13,30 +13,28 @@ def main(global_config, **local_config):
     """
     """
 
-    global RootFactory
-    global ApiFactory
+    global Factories
 
     print("Initializing Platform API...")
     config, settings = init_config(global_config, local_config)
 
-    RootFactory = config.get_settings()['RootFactory']
-    ApiFactory = config.get_settings()['ApiFactory']
+    Factories = config.registry.settings['Factories']
 
-    config.add_route('api.info', '/info', factory=ApiFactory)
+    config.add_route('api.info', '/info', factory=Factories.Api)
 
     # Messaging Routes
     config.add_route('api.messaging.all', '/messages',
                         request_method=("HEAD", "GET"),
-                        factory=ApiFactory)
+                        factory=Factories.Api)
     config.add_route('api.messaging.send', '/messages',
                         request_method=("POST",),
-                        factory=ApiFactory)
+                        factory=Factories.Api)
     config.add_route('api.messaging.get', '/messages/{id}',
                         request_method=("HEAD", "GET"),
-                        factory=ApiFactory)
+                        factory=Factories.Api)
     config.add_route('api.messaging.delete', '/messages/{id}',
                         request_method=("DELETE",),
-                        factory=ApiFactory)
+                        factory=Factories.Api)
 
     config.scan('{{project}}.api.views',
                         ignore='{{project}}.api.views.auth')

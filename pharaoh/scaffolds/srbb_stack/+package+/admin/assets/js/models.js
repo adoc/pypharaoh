@@ -18,19 +18,22 @@ define(['underscore', 'jquery', 'backbone', 'config'],
         });
 
         Models.Users = Backbone.Collection.extend({
-            url: Config.uri.api.users
+            url: Config.uri.api.users,
+            model: Models.User
         });
 
         Models.Groups = Backbone.Collection.extend({
-            url: Config.uri.api.groups
+            url: Config.uri.api.groups,
+            model: Models.Group
         });
 
         Models.Message = Backbone.Model.extend({
             urlRoot: Config.uri.api.messaging
         });
 
-        Models.Messages = Backbone.Model.extend({
-            url: Config.uri.api.messaging
+        Models.Messages = Backbone.Collection.extend({
+            url: Config.uri.api.messaging,
+            model: Models.Message
         });
 
         return Models;

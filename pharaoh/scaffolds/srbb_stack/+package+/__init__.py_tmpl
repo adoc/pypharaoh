@@ -5,9 +5,11 @@ import logging
 log = logging.getLogger(__name__)
 
 import os
+import collections
 import copy
 import functools
 import urllib.parse
+import concurrent.futures
 import rutter.urlmap
 import pytz
 import pyramid.settings
@@ -25,7 +27,7 @@ from {{project}} import db
 from {{project}} import models
 from {{project}} import auth
 from {{project}} import validators
-
+from {{project}} import urlmap
 
 from pprint import pprint
 
@@ -44,7 +46,14 @@ def init_factories(config, settings):
         def __init__(self, request):
             self.request = request
 
-    class ApiFactory(RootFactory):
+    class NoRedirectAuthFactory(RootFactory):
+        """Subclass factories will be contained such that they do not
+        redirect to login or to other authentication services.
+        """
+
+        pass
+
+    class ApiFactory(NoRedirectAuthFactory):
         """ApiFactory applied to all API calls. This is used for containing
         API views so the forbidden view returns an Authorized HTTP error
         rather than a redirect to login.
@@ -52,15 +61,25 @@ def init_factories(config, settings):
 
         pass
 
-    config.set_root_factory(RootFactory)
+    class JavascriptFactory(NoRedirectAuthFactory):
+        """
+        """
 
-    return RootFactory, ApiFactory
+        def __init__(self, request):
+            RootFactory.__init__(self, request)
+            self.request.response.content_type = "application/javascript"
 
+    class Factories:
+        Root = RootFactory
+        NoRedirectAuth = NoRedirectAuthFactory
+        Api = ApiFactory
+        Javascript = JavascriptFactory
 
-def js_view(request):
-    """Reusable Javascript view callable.
+    return Factories
+
+def null_view_callable(request):
+    """Returns nothing. Nothing!!!
     """
-    request.response.content_type = "application/javascript"
     return {}
 
 
@@ -223,19 +242,27 @@ def init_config(global_config, local_config):
     """Initialize each application's configuration.
     """
 
-
-
     # Handle the settings/config
-    settings = copy.deepcopy(global_config)
+    settings = copy.copy(global_config)
     settings.update(local_config)
     init_settings(settings)
 
     config = pyramid.config.Configurator(settings=settings)
-    import pdb; pdb.set_trace()
+
+    settings = config.registry.settings
+
+    # Only make changes to ``config`` after this point. ``settings``
+    #   are reference only.
 
     # Set up a dotted name resolver.
     caller = pyramid.path.caller_package()
     resolver = pyramid.path.DottedNameResolver(caller)
+
+    # Funky but should accurately aquire the calling component.
+    component = caller.__name__.lstrip('{{project}}.')
+    #global_config['__init_futures'][component] = (
+    #                global_config['__init_executor'].submit(lambda: True)) # Very basic....
+    #global_config['_config'] .update({component: config})
 
     # Add additional template file extensions for Mako rendering.
     config.add_mako_renderer('.html_mako')
@@ -265,16 +292,18 @@ def init_config(global_config, local_config):
         config.set_authorization_policy(
                             pyramid.authorization.ACLAuthorizationPolicy())
 
-        RootFactory, ApiFactory = init_factories(config, settings)
-        config.add_settings(RootFactory=RootFactory,
-                            ApiFactory=ApiFactory)
+        Factories = init_factories(config, settings)
+
+        config.set_root_factory(Factories.Root)
+
+        config.add_settings(Factories=Factories)
 
     if any(key in settings for key in ['auth.uri.login', 'auth.uri.logout']):
         try:
             auth_views = resolver.resolve('.views.auth')
         except ImportError:
             # TODO: Find a better exception.
-            log.warn("""auth.uri.* key(s) were specified in config """
+            log.info("""auth.uri.* key(s) were specified in config """
                     """but no auth views for package "%s" were found.""" % 
                                                                 caller.__name__)
             auth_views = resolver.resolve('{{project}}.views.auth')
@@ -311,7 +340,7 @@ def init_config(global_config, local_config):
 
         config.add_forbidden_view(auth_views.unauthorized_view)
         config.add_forbidden_view(auth_views.unauthorized_view_api,
-                                    containment=ApiFactory)
+                                    containment=Factories.NoRedirectAuth)
 
     if 'static.mapping' in settings and settings['static.serve'] is True:
         static_map = settings['static.mapping']
@@ -341,15 +370,17 @@ def init_config(global_config, local_config):
     if settings['base_js.enable'] is True:
         prefix = settings['base_js.prefix']
 
-        config.add_route('common.js', urllib.parse.urljoin(prefix, 'common.js'))
-        config.add_route('config.js', urllib.parse.urljoin(prefix, 'config.js'))
+        config.add_route('common.js', urllib.parse.urljoin(prefix, 'common.js'),
+                            factory=Factories.Javascript)
+        config.add_route('config.js', urllib.parse.urljoin(prefix, 'config.js'),
+                            factory=Factories.Javascript)
 
-        config.add_view(js_view,
+        config.add_view(null_view_callable,
                             route_name="common.js",
                             renderer=settings['base_js.template.common'],
                             http_cache=settings['base_js.cache_max_age'],
                             permission=settings['base_js.permission'])
-        config.add_view(js_view,
+        config.add_view(null_view_callable,
                             route_name="config.js",
                             renderer=settings['base_js.template.config'],
                             http_cache=settings['base_js.cache_max_age'],
@@ -362,6 +393,8 @@ def init_config(global_config, local_config):
                         http_cache=settings['robots.cache_max_age'])
 
     return config, settings
+
+
 
 
 def boot_factory(loader, global_config, **local_config):
@@ -383,9 +416,15 @@ def boot_factory(loader, global_config, **local_config):
         print("    Auth Models...")
         models.auth.init(global_config)
 
-    #global_config['composite'] = local_config
-    #global_config['composite'] = {}
-    #for k, v in local_config.items():
-    #    global_config['composite'][v] = {}
+    '''
+    ordered_config = collections.OrderedDict()
+    for index, app, prefix in sorted((v.split(':')[0], v.split(':')[1], prefix)
+                                        for prefix, v in local_config.items()):
+        indexed_config[rutter.urlmap._normalize_url(prefix)] = app
+
+    global_config['_config'] = {}
+    global_config['_composite_prefix'] = {
+                        app: prefix for prefix, app in local_config.items()}
+    '''
 
     return rutter.urlmap.urlmap_factory(loader, global_config, **local_config)

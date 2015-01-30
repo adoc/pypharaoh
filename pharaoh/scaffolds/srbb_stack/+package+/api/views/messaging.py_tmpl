@@ -18,9 +18,21 @@ from {{project}} import validators
 def all(request):
     """Gets all messages for this given user.
     """
+    if 'pagelen' in request.params:
+        _pagelen = int(request.params['pagelen'])
+    else:
+        _pagelen = 5
+
+    if 'page' in request.params:
+        _page = int(request.params['page'])
+    else:
+        _page = 1
+
+    offset = (_page - 1) * _pagelen
 
     return list(models.messaging.consume_iter(request.this_user,
-                    flash_only='flash' in request.params))
+                    flash_only='flash' in request.params, offset=offset,
+                    limit=_pagelen))
 
 
 @pyramid.view.view_config(route_name="api.messaging.send", renderer="json",

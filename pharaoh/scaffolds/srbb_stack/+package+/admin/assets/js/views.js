@@ -41,12 +41,13 @@ define(['underscore', 'jquery', 'backbone', 'config', 'models', 'templates'],
         Views.messageDropdown = BaseView.extend({
             el: $("#message_dropdown"),
             initialize: function (options) {
-                this.infoModel = options['infoModel'];
-                this.listenTo(this.infoModel, "change",
+                this.messagesModel = new Models.Messages();
+                this.listenTo(this.messagesModel, "add remove",
                                     _.debounce(this.render));
             },
             render: function () {
-                this.$el.html(Templates.alertDropdown(this));
+                console.log("render");
+                this.$el.html(Templates.messagesDropdown(this));
             }
         });
 
