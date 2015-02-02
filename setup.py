@@ -13,7 +13,7 @@ requires = [
     ]
 
 setup(name='pharaoh',
-      version='0.3.1',
+      version='0.3.1(srbb_ms2)',
       description='Pyramid helpers, base classes, etc.',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
