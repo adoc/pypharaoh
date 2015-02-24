@@ -9,7 +9,7 @@ def main(global_config, **local_config):
     """
     global Factories
 
-    print("Initializing Platform Web Application...")
+    print("Initializing Platform Root Application...")
 
     config, settings = init_config(global_config, local_config)
 
@@ -18,7 +18,7 @@ def main(global_config, **local_config):
     config.add_route('home', '/')
 
     # Don't add auth views at this time.
-    config.scan('{{project}}.web.views',
-                    ignore='{{project}}.web.views.auth')
+    config.scan('{{project}}.apps.root.views',
+                    ignore='{{project}}.apps.root.views.auth')
 
     return config.make_wsgi_app()

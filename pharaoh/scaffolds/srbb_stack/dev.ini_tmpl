@@ -8,7 +8,7 @@
 
 [composite:main] 
 use = call:{{project}}:boot_factory
-/ = web
+/ = root
 /admin/ = admin 
 /api/v1/ = api
 
@@ -16,7 +16,7 @@ use = call:{{project}}:boot_factory
 # Use ``paste.deploy.prefix`` to cparse web server reverse proxy
 #   environment data. "prefix" must match the prefix used in the
 #   "composite" section.
-[filter:proxy_handle_web]
+[filter:proxy_handle_root]
 prefix = /
 use = egg:PasteDeploy#prefix
 
@@ -193,7 +193,7 @@ auth_tkt.hashalg = sha512
 
 
 [app:api]
-use = call:{{project}}.api:main
+use = call:{{project}}.apps.api:main
 filter-with = proxy_handle_api
 
 pyramid.default_locale_name = en
@@ -256,9 +256,9 @@ base_js.permission = admin
 base_js.template.common =
 base_js.template.config =
 
-[app:web]
-use = call:{{project}}.web:main
-filter-with = proxy_handle_web
+[app:root]
+use = call:{{project}}.apps.root:main
+filter-with = proxy_handle_root
 
 pyramid.default_locale_name = en
 pyramid.reload_templates = true
@@ -281,7 +281,7 @@ robots.txt =
     Disallow: /login
     Disallow: /logout
 
-mako.directories = {{project}}.web:templates
+mako.directories = {{project}}.apps.root:templates
 
 mako.imports = 
     import json
@@ -302,7 +302,7 @@ beaker.session.key = {{project}}_session
 # uri|directory|cache_max_age
 static.mapping =
     static|{{project}}:static/|0
-    assets|{{project}}.web:assets/|0
+    assets|{{project}}.apps.root:assets/|0
 static.serve = true
 
 # Enable common.js and config.js.

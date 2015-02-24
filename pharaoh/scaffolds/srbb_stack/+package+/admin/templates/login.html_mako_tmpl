@@ -1,4 +1,4 @@
-<%inherit file="{{project}}.web:templates/base.html_mako" />
+<%inherit file="base.html_mako" />
 <div style="height: 200px;"></div>
 <div style="width: 300px" class="container">
     %if failed:

@@ -27,7 +27,7 @@ from {{project}} import db
 from {{project}} import models
 from {{project}} import auth
 from {{project}} import validators
-from {{project}} import urlmap
+
 
 from pprint import pprint
 
@@ -91,7 +91,9 @@ def robots_view(request):
 
 
 def init_settings(settings):
-    """Set application specific settings."""
+    """Set application specific settings. This sets some default
+    settings and also ensures that settings are parsed properly from
+    the INI."""
 
     resolver = pyramid.path.DottedNameResolver(
                                     pyramid.path.caller_package())

@@ -50,8 +50,7 @@ setup(name='{{project}}',
       test_suite='{{package}}',
       install_requires=requires,
       entry_points="""\
-      [paste.app_factory]
-      api = {{project}}.api:main
+      #[paste.app_factory]
       [console_scripts]
       initialize_core_db = {{project}}.scripts.initializedb:main
       """,
